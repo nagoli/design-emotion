@@ -1,0 +1,56 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": [
+                "arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticache:Describe*",
+                "elasticache:List*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticache:CreateCacheCluster",
+                "elasticache:ModifyCacheCluster",
+                "elasticache:DeleteCacheCluster"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData",
+                "cloudwatch:GetMetricData",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::your-s3-bucket-name/*",
+                "arn:aws:s3:::your-s3-bucket-name"
+            ]
+        }
+    ]
+}

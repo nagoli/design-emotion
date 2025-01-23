@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 import boto3
 import redis
 import openai
+import playwright.sync_api as sync_playwright
+from botocore.exceptions import ClientError
 
 # If you are using an AWS-compatible version of Playwright, import it accordingly.
 # For example, if you have a layer that includes playwright_aws_lambda, you might do:
@@ -29,8 +31,8 @@ logger.setLevel(logging.INFO)
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
-OPENAI_SECRET_NAME = os.environ.get("OPENAI_SECRET_NAME", "my-openai-secret")
-AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+OPENAI_SECRET_NAME = os.environ.get("OPENAI_SECRET_NAME", "openai-key")
+AWS_REGION = os.environ.get("AWS_REGION","eu-west-3")
 PROMPT = os.environ.get("PROMPT", "Please provide a design transcript based on this screenshot.")
 
 # We will hold a global reference to Playwright's browser to avoid re-initialization
@@ -42,18 +44,33 @@ redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=Tr
 # -----------------------------------------------------------------------------
 # Utility Functions
 # -----------------------------------------------------------------------------
-
 def _get_openai_api_key():
     """
     Retrieves the OpenAI API key from AWS Secrets Manager.
     Assumes the secret is a JSON with a field named 'API_KEY'.
     """
+    secret_name = OPENAI_SECRET_NAME
+    region_name = AWS_REGION
+
+    # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(service_name='secretsmanager', region_name=AWS_REGION)
-    response = client.get_secret_value(SecretId=OPENAI_SECRET_NAME)
-    secret_str = response['SecretString']
-    secret_dict = json.loads(secret_str)
-    return secret_dict['API_KEY']
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+    secret = get_secret_value_response['SecretString']["OPENAI_API_KEY"]
+    print (secret)
+    return secret
 
 def _init_browser():
     """
