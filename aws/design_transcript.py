@@ -1,3 +1,4 @@
+from ast import main
 import os
 import json
 import logging
@@ -7,6 +8,8 @@ import boto3
 import redis
 import openai
 import playwright.sync_api as sync_playwright
+#from playwright_stealth import stealth_sync
+
 from botocore.exceptions import ClientError
 
 # If you are using an AWS-compatible version of Playwright, import it accordingly.
@@ -21,7 +24,13 @@ from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
 # Environment variables expected (example):
 #   REDIS_HOST: Host of the Redis cluster (ElastiCache).
 #   REDIS_PORT: Port of the Redis cluster.
@@ -33,7 +42,8 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 OPENAI_SECRET_NAME = os.environ.get("OPENAI_SECRET_NAME", "openai-key")
 AWS_REGION = os.environ.get("AWS_REGION","eu-west-3")
-PROMPT = os.environ.get("PROMPT", "Please provide a design transcript based on this screenshot.")
+PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. 
+""")
 
 # We will hold a global reference to Playwright's browser to avoid re-initialization
 _browser = None
@@ -68,9 +78,8 @@ def _get_openai_api_key():
         # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         raise e
 
-    secret = get_secret_value_response['SecretString']["OPENAI_API_KEY"]
-    print (secret)
-    return secret
+    secret = get_secret_value_response['SecretString']
+    return json.loads(secret)["OPENAI_API_KEY"]
 
 def _init_browser():
     """
@@ -98,7 +107,7 @@ HIDE_MODAL_ELEMENTS_JS = """
                 (rect.bottom > window.innerHeight - shift && rect.right > window.innerWidth - shift && rect.width < window.innerWidth - (2 * shift))  // Bottom-right corner
             );
             if (!inCorner) {
-                element.style.opacity = 0;
+                element.style.opacity = 0.3;
             }
         }
     });
@@ -126,6 +135,7 @@ def get_screen_shot(url: str) -> bytes:
     browser = _init_browser()
     context = browser.new_context(viewport={"width": 1280, "height": 1024})
     page = context.new_page()
+    #stealth_sync(page)
 
     try:
         page.goto(url, wait_until="networkidle")
@@ -137,6 +147,43 @@ def get_screen_shot(url: str) -> bytes:
     finally:
         context.close()
     return screenshot
+
+
+def is_within_two_weeks(date_str: str, cached_date_str: str) -> bool:
+    """
+    Vérifie si deux dates sont espacées de moins de deux semaines.
+
+    Args:
+        date_str (str): La première date. Peut être en format ISO 8601 ou RFC 1123.
+        cached_date_str (str): La seconde date. Peut être en format ISO 8601 ou RFC 1123.
+
+    Returns:
+        bool: True si les dates sont espacées de moins de deux semaines, False sinon ou en cas d'erreur.
+    """
+    def parse_date(date_str):
+        for fmt in ("%Y-%m-%dT%H:%M:%SZ",  # ISO 8601
+                    "%a, %d %b %Y %H:%M:%S GMT"):  # RFC 1123
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        raise ValueError(f"Format de date non supporté: {date_str}")
+
+    try:
+        date_val = parse_date(date_str)
+        cached_date_val = parse_date(cached_date_str)
+        
+        # Calcul de la différence absolue entre les deux dates
+        difference = abs(date_val - cached_date_val)
+        
+        # Vérifie si la différence est inférieure à deux semaines
+        return difference < timedelta(weeks=2)
+    except ValueError as ve:
+        logger.error(f"Erreur de format de date : {ve}")
+        return False
+    except Exception as e:
+        logger.exception(f"Erreur inattendue : {e}")
+        return False
 
 
 def get_cached_design_transcript(url: str, lang: str, etag: str, lastmodifieddate: str) -> str:
@@ -165,32 +212,37 @@ def get_cached_design_transcript(url: str, lang: str, etag: str, lastmodifieddat
     cached_last_modified = cache_data.get("lastmodifieddate")
     transcripts = cache_data.get("transcripts", [])  # List of tuples (lang, transcript)
 
-    def _within_two_weeks(date_str: str) -> bool:
+    def _within_two_weeks(date_str: str, cached_date_str: str) -> bool:
         try:
             date_val = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-            return (datetime.now(timezone.utc) - date_val) < timedelta(weeks=2)
+            cached_date_val = datetime.fromisoformat(cached_date_str.replace('Z', '+00:00'))
+            return abs(date_val - cached_date_val) < timedelta(weeks=2)
         except Exception:
             return False
 
     # If ETag matches or lastmodifieddate is within two weeks, we can reuse from cache
-    if (etag and etag == cached_etag) or (lastmodifieddate and _within_two_weeks(lastmodifieddate)):
-        logger.info("Cache is potentially valid. Checking for language availability.")
+    match = etag and etag == cached_etag
+    logger.info("Checking cache for ETag : " + str(match))
+    if not match:
+        match = lastmodifieddate and is_within_two_weeks(lastmodifieddate, cached_last_modified)
+        logger.info("Checking cache for lastmodifieddate : " + str(match))
+    if match:
+        logger.info("Cache is valid. Checking for language availability.")
         for (trans_lang, trans_text) in transcripts:
             if trans_lang == lang:
                 logger.info(f"Found transcript in requested language ({lang}) in cache.")
                 return trans_text
 
-        # If we have an English transcript but not the requested language, try to translate
+        # If we have an transcript but not the requested language, try to translate
         for (trans_lang, trans_text) in transcripts:
-            if trans_lang == "en":
-                # Translate to requested language
-                translated = _translate_with_chatgpt(trans_text, "en", lang)
-                # Update cache with the newly translated transcript
-                transcripts.append((lang, translated))
-                cache_data["transcripts"] = transcripts
-                redis_client.set(cache_key, json.dumps(cache_data))
-                logger.info(f"Added translated transcript ({lang}) to cache.")
-                return translated
+            # Translate to requested language
+            translated = _translate_with_chatgpt(trans_text, trans_lang, lang)
+            # Update cache with the newly translated transcript
+            transcripts.append((lang, translated))
+            cache_data["transcripts"] = transcripts
+            redis_client.set(cache_key, json.dumps(cache_data))
+            logger.info(f"Added translated transcript ({lang}) to cache.")
+            return translated
 
     logger.info("Cache is present but does not meet criteria or no suitable transcript found.")
     return None
@@ -201,32 +253,46 @@ def generate_design_transcript(img: bytes, lang: str) -> str:
     Sends the image to ChatGPT-4 with a predefined prompt stored in an environment variable (PROMPT).
     The ChatGPT API key is stored in AWS Secret Manager.
     """
+    print("transcript called")
     logger.info("Generating design transcript via ChatGPT.")
-    openai.api_key = _get_openai_api_key()
+    client = openai.OpenAI(api_key=_get_openai_api_key())
 
-    # Here we simulate sending the image to ChatGPT.
-    # Since ChatGPT (OpenAI) doesn't natively accept direct images, you'd typically do OCR
-    # or some additional step. For demonstration, let's assume we can pass base64 or a reference
-    # to an image. Adjust the code for your real usage scenario.
+    # Convert bytes to base64 string
+    if isinstance(img, bytes):
+        import base64
+        base64_image = base64.b64encode(img).decode('utf-8')
+    else:
+        logger.error("Expected bytes for image data")
+        raise ValueError("Image data must be bytes")
 
-    # This example simply uses the prompt + " (base64 image data)" as context:
-    base64_image_data = img.encode('base64') if hasattr(img, 'encode') else "FAKE_IMAGE_DATA"
-    system_prompt = PROMPT
-
-    # For ChatGPT-4 usage:
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": PROMPT},
                 {
                     "role": "user",
-                    "content": f"Analyze this design (image data): {base64_image_data}. "
-                               f"Return transcript in language: {lang}"
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Analyze this website :",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_image}"
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": f"Return transcript in language: {lang}",
+                        },
+                    ],
                 },
-            ]
+            ],
+            max_tokens=1000
         )
-        transcript = response["choices"][0]["message"]["content"].strip()
+        transcript = response.choices[0].message.content.strip()
         return transcript
     except Exception as e:
         logger.error(f"Error generating transcript from ChatGPT: {e}")
@@ -237,18 +303,19 @@ def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> st
     """
     Helper function to translate a given text from source_lang to target_lang using ChatGPT.
     """
+    print("translate called")
     logger.info(f"Translating transcript from {source_lang} to {target_lang} via ChatGPT.")
-    openai.api_key = _get_openai_api_key()
+    client = openai.OpenAI(api_key=_get_openai_api_key())
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": f"Translate from {source_lang} to {target_lang}"},
                 {"role": "user", "content": text}
             ]
         )
-        return response["choices"][0]["message"]["content"].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Error translating text via ChatGPT: {e}")
         raise
@@ -324,7 +391,7 @@ def lambda_handler(event, context):
         transcript = get_design_transcript(url, etag, lastmodifieddate, lang)
         return {
             "statusCode": 200,
-            "body": json.dumps({"transcript": transcript})
+            "body": json.dumps({"transcript": transcript}, ensure_ascii=False)
         }
 
     except Exception as e:
@@ -333,3 +400,22 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
+        
+        
+if __name__ == "__main__":
+    if (False) :
+        screen_shot = get_screen_shot("https://www.respiration-yoga.fr")
+        with open("test2.png", 'wb') as f:
+            f.write(screen_shot)
+    if (True) : 
+        event_get = {
+            "queryStringParameters": {
+                "url": "https://respiration-yoga.fr/",
+                "etag": "3260-6212906e91527-br",
+                "lastmodifieddate": "Mon, 02 Sep 2024 20:45:53 GMT",
+                "lang": "french"
+            }
+        }   
+        context = {}
+        response_get = lambda_handler(event_get, context)
+        print("Réponse GET :", response_get)

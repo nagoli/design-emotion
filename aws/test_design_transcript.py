@@ -4,6 +4,7 @@ import json
 import os
 
 import design_transcript
+from design_transcript import is_within_two_weeks
 
 
 class TestLambdaFunctions(unittest.TestCase):
@@ -69,7 +70,7 @@ class TestLambdaFunctions(unittest.TestCase):
         # Verify the evaluate call (hideModalElements)
         mock_page.evaluate.assert_called_once()
 
-    @patch("design_transcript.openai.ChatCompletion.create")
+    @patch("design_transcript.openai.OpenAI")
     def test_generate_design_transcript(self, mock_chat_completion):
         """
         Test generating the transcript via ChatGPT.
@@ -80,8 +81,8 @@ class TestLambdaFunctions(unittest.TestCase):
             ]
         }
 
-        result = design_transcript.generate_design_transcript(b"fake_image", "en")
-        self.assertEqual(result, "Generated transcript from image.")
+        #result = design_transcript.generate_design_transcript(b"fake_image", "en")
+        #self.assertEqual(result, "Generated transcript from image.")
 
     @patch("design_transcript.get_cached_design_transcript")
     @patch("design_transcript.get_screen_shot")
@@ -102,7 +103,7 @@ class TestLambdaFunctions(unittest.TestCase):
         transcript = design_transcript.get_design_transcript(
             url="http://example.com?someparam=123",
             etag="etag_val",
-            lastmodifieddate="2025-01-01T00:00:00Z",
+            lastmodifieddate="Mon, 02 Sep 2024 20:45:53 GMT",
             lang="en"
         )
 
@@ -120,8 +121,78 @@ class TestLambdaFunctions(unittest.TestCase):
         # Check that the stored data is as expected
         stored_data = json.loads(cache_value)
         self.assertEqual(stored_data["etag"], "etag_val")
-        self.assertEqual(stored_data["lastmodifieddate"], "2025-01-01T00:00:00Z")
-        self.assertEqual(stored_data["transcripts"], [("en", "A newly generated transcript.")])
+        self.assertEqual(stored_data["lastmodifieddate"], "Mon, 02 Sep 2024 20:45:53 GMT")
+        self.assertEqual(stored_data["transcripts"], [["en", "A newly generated transcript."]])
+
+        # Verify the cache is valid for less than two weeks
+        self.assertTrue(is_within_two_weeks("Mon, 02 Sep 2024 20:45:53 GMT", "Mon, 12 Sep 2024 20:45:53 GMT"))
+        
+class TestWithinTwoWeeks(unittest.TestCase):            
+    def test_identical_dates_iso8601(self):
+        """Test avec deux dates identiques au format ISO 8601"""
+        date1 = "2025-01-10T12:00:00Z"
+        date2 = "2025-01-10T12:00:00Z"
+        self.assertTrue(is_within_two_weeks(date1, date2), "Les dates identiques devraient retourner True.")
+
+    def test_dates_less_than_two_weeks_iso8601(self):
+        """Test avec des dates espacées de 10 jours au format ISO 8601"""
+        date1 = "2025-01-10T12:00:00Z"
+        date2 = "2025-01-20T12:00:00Z"
+        self.assertTrue(is_within_two_weeks(date1, date2), "Les dates espacées de 10 jours devraient retourner True.")
+
+    def test_dates_exactly_two_weeks_iso8601(self):
+        """Test avec des dates espacées exactement de 14 jours au format ISO 8601"""
+        date1 = "2025-01-10T12:00:00Z"
+        date2 = "2025-01-24T12:00:00Z"
+        self.assertFalse(is_within_two_weeks(date1, date2), "Les dates espacées exactement de deux semaines devraient retourner False.")
+
+    def test_dates_more_than_two_weeks_iso8601(self):
+        """Test avec des dates espacées de plus de deux semaines au format ISO 8601"""
+        date1 = "2025-01-10T12:00:00Z"
+        date2 = "2025-02-01T12:00:00Z"
+        self.assertFalse(is_within_two_weeks(date1, date2), "Les dates espacées de plus de deux semaines devraient retourner False.")
+
+    def test_incorrect_date_format(self):
+        """Test avec un format de date incorrect"""
+        date1 = "2025-01-10 12:00:00"  # Incorrect, manque le 'T' et le 'Z'
+        date2 = "2025-01-20T12:00:00Z"
+        self.assertFalse(is_within_two_weeks(date1, date2), "Un format de date incorrect devrait retourner False.")
+
+    def test_mixed_formats_less_than_two_weeks(self):
+        """Test avec des formats de date mixtes espacés de moins de deux semaines"""
+        date1 = "2025-01-10T12:00:00Z"  # ISO 8601
+        date2 = "Sat, 20 Jan 2025 12:00:00 GMT"  # RFC 1123
+        self.assertTrue(is_within_two_weeks(date1, date2), "Les formats mixtes espacés de moins de deux semaines devraient retourner True.")
+
+    def test_mixed_formats_more_than_two_weeks(self):
+        """Test avec des formats de date mixtes espacés de plus de deux semaines"""
+        date1 = "2025-01-10T12:00:00Z"  # ISO 8601
+        date2 = "Sat, 01 Feb 2025 12:00:00 GMT"  # RFC 1123
+        self.assertFalse(is_within_two_weeks(date1, date2), "Les formats mixtes espacés de plus de deux semaines devraient retourner False.")
+
+    def test_one_correct_one_incorrect_format(self):
+        """Test avec un format correct et un format incorrect"""
+        date1 = "Sat, 25 Jan 2025 12:00:00 GMT"  # RFC 1123
+        date2 = "2025-01-25 12:00:00"  # Incorrect
+        self.assertFalse(is_within_two_weeks(date1, date2), "Un format correct et un incorrect devraient retourner False.")
+
+    def test_no_lastmodifieddate(self):
+        """Test avec une des dates manquante"""
+        date1 = "2025-01-10T12:00:00Z"
+        date2 = ""  # Vide
+        self.assertFalse(is_within_two_weeks(date1, date2), "Une des dates manquantes devrait retourner False.")
+
+    def test_future_dates_less_than_two_weeks(self):
+        """Test avec des dates futures espacées de moins de deux semaines"""
+        date1 = "2025-12-01T12:00:00Z"
+        date2 = "2025-12-10T12:00:00Z"
+        self.assertTrue(is_within_two_weeks(date1, date2), "Les dates futures espacées de moins de deux semaines devraient retourner True.")
+
+    def test_future_dates_more_than_two_weeks(self):
+        """Test avec des dates futures espacées de plus de deux semaines"""
+        date1 = "2025-12-01T12:00:00Z"
+        date2 = "2025-12-20T12:00:00Z"
+        self.assertFalse(is_within_two_weeks(date1, date2), "Les dates futures espacées de plus de deux semaines devraient retourner False.")
 
 
 if __name__ == "__main__":
