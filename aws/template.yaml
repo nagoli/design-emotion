@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Design Emotion Lambda function for analyzing website design emotions
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Stage for deployment
+  RedisHost:
+    Type: String
+    Default: host.docker.internal
+    Description: Redis host for development
+  RedisPort:
+    Type: String
+    Default: 6379
+    Description: Redis port for development
+  OpenAISecretName:
+    Type: String
+    Default: openai-key
+    Description: Name of the secret containing OpenAI API key
+  AWSRegion:
+    Type: String
+    Default: eu-west-3
+    Description: AWS Region
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.9
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        REDIS_HOST: !Ref RedisHost
+        REDIS_PORT: !Ref RedisPort
+        OPENAI_SECRET_NAME: !Ref OpenAISecretName
+        AWS_REGION: !Ref AWSRegion
+
+Resources:
+  DesignTranscriptFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: design_transcript.lambda_handler
+      Description: Analyzes website design and generates emotional transcripts
+      PackageType: Zip
+      Architectures:
+        - x86_64
+      Policies:
+         - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
+            - Effect: Allow
+              Action:
+                - elasticache:DescribeCacheClusters
+                - elasticache:DescribeReplicationGroups
+              Resource: "*"
+      Events:
+        DesignTranscriptApi:
+          Type: Api
+          Properties:
+            Path: /transcript
+            Method: post
+            Cors:
+              AllowMethods: "'OPTIONS,POST'"
+              AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              AllowOrigin: "'*'"
+
+  DesignTranscriptImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: design_transcript.lambda_handler_image
+      Description: Processes direct image uploads and generates emotional transcripts
+      PackageType: Zip
+      Architectures:
+        - x86_64
+      Policies:
+         - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
+      Events:
+        DesignTranscriptImageApi:
+          Type: Api
+          Properties:
+            Path: /image-transcript
+            Method: post
+            Cors:
+              AllowMethods: "'OPTIONS,POST'"
+              AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              AllowOrigin: "'*'"
+
+
+# A RETIRER EN PROD OU A METTRE DERRIERE UNE CLE 
+  DesignCacheInspectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: design_transcript.lambda_handler_cache
+      Description: Inspection du cache Redis
+      Events:
+        DesignCacheApi:
+          Type: Api
+          Properties:
+            Path: /cache
+            Method: get
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - elasticache:DescribeCacheClusters
+            Resource: "*"
+
+  DesignEmotionApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+        ExposeHeaders: "'Content-Type'"
+        MaxAge: "'600'"
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Usage plan for Design Emotion API
+          Quota:
+            Limit: 1000
+            Period: MONTH
+          Throttle:
+            BurstLimit: 10
+            RateLimit: 5
+
+Outputs:
+  DesignEmotionApi:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${DesignEmotionApi}.execute-api.${AWSRegion}.amazonaws.com/${Stage}/transcript"
+
+  DesignTranscriptFunction:
+    Description: "Design Transcript Lambda Function ARN"
+    Value: !GetAtt DesignTranscriptFunction.Arn
+
+  DesignTranscriptImageFunction:
+    Description: "Design Transcript Image Lambda Function ARN"
+    Value: !GetAtt DesignTranscriptImageFunction.Arn

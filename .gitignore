@@ -58,4 +58,5 @@ coverage.xml
 
 # AWS
 .aws/
+.aws-sam/
 *.pem

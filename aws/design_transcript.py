@@ -10,7 +10,10 @@ import openai
 import playwright.sync_api as sync_playwright
 #from playwright_stealth import stealth_sync
 
+import hashlib
 from botocore.exceptions import ClientError
+import base64
+
 
 # If you are using an AWS-compatible version of Playwright, import it accordingly.
 # For example, if you have a layer that includes playwright_aws_lambda, you might do:
@@ -42,7 +45,7 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 OPENAI_SECRET_NAME = os.environ.get("OPENAI_SECRET_NAME", "openai-key")
 AWS_REGION = os.environ.get("AWS_REGION","eu-west-3")
-PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. 
+PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …
 """)
 
 # We will hold a global reference to Playwright's browser to avoid re-initialization
@@ -81,38 +84,7 @@ def _get_openai_api_key():
     secret = get_secret_value_response['SecretString']
     return json.loads(secret)["OPENAI_API_KEY"]
 
-def _init_browser():
-    """
-    Initializes and returns a singleton Playwright browser instance.
-    """
-    global _browser
-    if _browser is None:
-        # If using a special AWS-compatible version, replace with that approach:
-        playwright = sync_playwright().start()
-        _browser = playwright.chromium.launch(headless=True)
-    return _browser
 
-# JavaScript code to hide modal elements
-HIDE_MODAL_ELEMENTS_JS = """
-() => {
-    const shift = 30; // Margin to define corners
-    const allElements = document.querySelectorAll('*');
-    Array.from(allElements).forEach(element => {
-        const style = window.getComputedStyle(element);
-        if (style.position === 'fixed') {
-            const rect = element.getBoundingClientRect();
-            const inCorner = (
-                (rect.top < shift && rect.left < shift && rect.height < window.innerHeight - (2 * shift)) ||  // Top-left corner
-                (rect.top < shift && rect.right > window.innerWidth - shift && rect.height < window.innerHeight - (2 * shift)) ||  // Top-right corner
-                (rect.bottom > window.innerHeight - shift && rect.right > window.innerWidth - shift && rect.width < window.innerWidth - (2 * shift))  // Bottom-right corner
-            );
-            if (!inCorner) {
-                element.style.opacity = 0.3;
-            }
-        }
-    });
-}
-"""
 
 # -----------------------------------------------------------------------------
 # Lambda Functions
@@ -125,28 +97,6 @@ def hideModalElements():
     """
     pass  # The actual script is in HIDE_MODAL_ELEMENTS_JS above.
 
-
-def get_screen_shot(url: str) -> bytes:
-    """
-    For a given URL, captures a screenshot of the page (up to 1024px height),
-    after executing the 'hideModalElements' JS script in the browser.
-    """
-    logger.info(f"Capturing screenshot for URL: {url}")
-    browser = _init_browser()
-    context = browser.new_context(viewport={"width": 1280, "height": 1024})
-    page = context.new_page()
-    #stealth_sync(page)
-
-    try:
-        page.goto(url, wait_until="networkidle")
-        page.evaluate(HIDE_MODAL_ELEMENTS_JS)
-        screenshot = page.screenshot(full_page=False)
-    except Exception as e:
-        logger.error(f"Failed to capture screenshot for {url}: {e}")
-        raise
-    finally:
-        context.close()
-    return screenshot
 
 
 def is_within_two_weeks(date_str: str, cached_date_str: str) -> bool:
@@ -255,7 +205,15 @@ def generate_design_transcript(img: bytes, lang: str) -> str:
     """
     print("transcript called")
     logger.info("Generating design transcript via ChatGPT.")
-    client = openai.OpenAI(api_key=_get_openai_api_key())
+    
+    if (False):
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+        )
+    else : 
+        client = openai.OpenAI(api_key=_get_openai_api_key())
+
 
     # Convert bytes to base64 string
     if isinstance(img, bytes):
@@ -321,7 +279,46 @@ def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> st
         raise
 
 
-def get_design_transcript(url: str, etag: str, lastmodifieddate: str, lang: str = "en") -> str:
+def create_cached_url_info(url: str, lang: str, etag: str, lastmodifieddate: str) -> str:
+    logger.info("Storing url info in cache.")
+    #generate unique id
+    url_md5 = hashlib.md5(url.encode()).hexdigest()
+    short_id = url_md5 #[:8]
+    cache_key = f"urlinfo_cache:{short_id}"
+    cache_value = {
+        "url": url,
+        "lang":lang,
+        "etag": etag,
+        "lastmodifieddate": lastmodifieddate,
+    }
+    redis_client.set(cache_key, json.dumps(cache_value))
+    return short_id
+
+def pop_cached_url_info(short_id: str) -> str:
+    logger.info("Popping url info from cache.")
+    cache_key = f"urlinfo_cache:{short_id}"
+    cache_value = redis_client.get(cache_key)
+    if cache_value is None:
+        return None
+    redis_client.delete(cache_key)
+    return json.loads(cache_value)
+
+
+def store_cached_design_transcript(url: str, lang: str, etag: str, lastmodifieddate: str, transcript: str) -> None:
+    logger.info("Storing transcript in cache.")
+    cache_key = f"transcript_cache:{url}"
+    cache_value = {
+        "etag": etag,
+        "lastmodifieddate": lastmodifieddate,
+        "transcripts": [
+            (lang, transcript)
+        ]
+    }
+    redis_client.set(cache_key, json.dumps(cache_value))
+
+
+
+def get_design_transcript(url: str, etag: str, lastmodifieddate: str, lang: str = "en") -> (bool, str):
     """
     Main orchestration function:
       1. Cleans the URL of query parameters.
@@ -338,27 +335,34 @@ def get_design_transcript(url: str, etag: str, lastmodifieddate: str, lang: str 
     # Check Cache
     cached_transcript = get_cached_design_transcript(url, lang, etag, lastmodifieddate)
     if cached_transcript is not None:
-        return cached_transcript
+        return (True, cached_transcript)
+    
+    return (False, create_cached_url_info(url,lang,etag,lastmodifieddate))
 
-    # Capture screenshot
-    img = get_screen_shot(url)
 
+def get_design_transcript_with_image(id, img) :
+    
+    info= pop_cached_url_info(id)
+    print(info )
+    
     # Generate transcript from ChatGPT
-    transcript = generate_design_transcript(img, lang)
+    transcript = generate_design_transcript(img, info['lang'])
 
     # Store in cache
-    logger.info("Storing transcript in cache.")
-    cache_key = f"transcript_cache:{url}"
-    cache_value = {
-        "etag": etag,
-        "lastmodifieddate": lastmodifieddate,
-        "transcripts": [
-            (lang, transcript)
-        ]
-    }
-    redis_client.set(cache_key, json.dumps(cache_value))
-
+    store_cached_design_transcript(info['url'], info['lang'], info['etag'], info['lastmodifieddate'], transcript)
+    
     return transcript
+
+
+
+
+def get_cors_headers():
+    return {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+    }
 
 def lambda_handler(event, context):
     """
@@ -371,6 +375,14 @@ def lambda_handler(event, context):
         "lang": <string, optional>
     }
     """
+    # Handle OPTIONS request for CORS
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': ''
+        }
+
     try:
         body = event.get("body")
         if body is None:
@@ -388,11 +400,18 @@ def lambda_handler(event, context):
             lastmodifieddate = data.get("lastmodifieddate")
             lang = data.get("lang", "en")
 
-        transcript = get_design_transcript(url, etag, lastmodifieddate, lang)
+        known, param = get_design_transcript(url, etag, lastmodifieddate, lang)
+        if known : 
+            return {
+                "statusCode": 200,
+                'headers': get_cors_headers(),
+                "body": json.dumps({"known": 1, "transcript": param}, ensure_ascii=False)
+            }
         return {
-            "statusCode": 200,
-            "body": json.dumps({"transcript": transcript}, ensure_ascii=False)
-        }
+                "statusCode": 200,
+                'headers': get_cors_headers(),
+                "body": json.dumps({"known": 0, "id": param}, ensure_ascii=False)
+            }
 
     except Exception as e:
         logger.exception("Error in lambda_handler")
@@ -400,17 +419,116 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": str(e)})
         }
+
+def lambda_handler_image(event, context):
+    """
+    Lambda entry point for direct image processing.
+    Expects JSON input with the following keys:
+    {
+        "id": <string>,
+        "image": <string, base64 encoded image>,
+        "lang": <string, optional>
+    }
+    """
+    try:
+        body = event.get("body")
+        if body is None:
+            # If triggered by GET with queryStringParameters
+            params = event.get("queryStringParameters", {})
+            id = params["id"]
+            image = params["image"]
+        else:
+            # If triggered by POST with JSON body
+            params = json.loads(body)
+            id = params["id"]
+            image = params["image"]
         
+        print(event)
+        # Extract parameters from the event
+        
+        if not id:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Missing required parameter: id'})
+            }
+
+        if not image:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Missing required parameter: image'})
+            }
+
+        # Decode base64 image
+        import base64
+        try:
+            image_bytes = base64.b64decode(image) 
+        except Exception as e:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': f'Invalid base64 image data: {str(e)}'})
+            }
+  
+        # Generate transcript
+        transcript = get_design_transcript_with_image(id, image_bytes)
+
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json; charset=utf-8',
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "OPTIONS,POST"
+            },
+            'body': json.dumps({
+                'transcript': transcript
+            }, ensure_ascii=False)
+        }
+
+    except Exception as e:
+        logger.error(f'Error processing image: {str(e)}', exc_info=True)
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+        }
+
+def lambda_handler_cache(event, context):
+    """Affiche le contenu complet du cache Redis"""
+    try:
+        cache_keys = redis_client.keys("*")
+        cache_data = {key: redis_client.get(key) for key in cache_keys}
+
+        return {
+            'statusCode': 200,
+             'headers': {
+                'Content-Type': 'application/json; charset=utf-8',
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+            },
+            'body': json.dumps({
+                'cache_entries': len(cache_data),
+                'data': cache_data
+            }, ensure_ascii=False)
+        }
+        
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+ 
         
 if __name__ == "__main__":
     if (False) :
         screen_shot = get_screen_shot("https://www.respiration-yoga.fr")
-        with open("test2.png", 'wb') as f:
+        #export to file
+        with open("screenshot.png", "wb") as f:
             f.write(screen_shot)
-    if (True) : 
+
+    if (False) : 
         event_get = {
             "queryStringParameters": {
-                "url": "https://respiration-yoga.fr/",
+                "url": "https://respiration-yogae.fr/",
                 "etag": "3260-6212906e91527-br",
                 "lastmodifieddate": "Mon, 02 Sep 2024 20:45:53 GMT",
                 "lang": "french"
@@ -419,3 +537,21 @@ if __name__ == "__main__":
         context = {}
         response_get = lambda_handler(event_get, context)
         print("Réponse GET :", response_get)
+        
+    if (True) : 
+        screenshot = None
+        image=None
+        with open("screenshot.png") as f:
+            f.read(screenshot)
+        base64.encode(screenshot, image)
+        event_get = {
+            "queryStringParameters": {
+                "id": "68f90748e770518b3171369d3edf3235",
+                "image": image
+            }
+        }   
+        context = {}
+        response_get = lambda_handler_image(event_get, context)
+        print("Réponse GET :", response_get)
+         
+    

@@ -1,0 +1,35 @@
+version = 0.1
+[default]
+[default.build.parameters]
+    cached = true
+    parallel = true
+    profile = "default"
+    cache_basedir = ".aws-sam/build"
+    skip_pull_image = false
+
+[default.deploy.parameters]
+    stack_name = "design-emotion"
+    s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-XXXXXXXXXXXX"
+    s3_prefix = "design-emotion"
+    region = "eu-west-3"
+    confirm_changeset = true
+    capabilities = "CAPABILITY_IAM"
+    profile = "default"
+    image_repositories = []
+
+[default.local_start_api.parameters]
+    warm_containers = "EAGER"
+
+[local.invoke]
+[local.invoke.parameters]
+    profile = "default"
+    parameter_overrides = "RedisHost=host.docker.internal RedisPort=6379 OpenAISecretArn=arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR"
+    docker_network = "mynetwork"
+    no_warm_containers = true
+
+[local.start-api]
+[local.start-api.parameters]
+    profile = "default"
+    parameter_overrides = "RedisHost=host.docker.internal RedisPort=6379 OpenAISecretArn=arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR"
+    docker_network = "mynetwork"
+    no_warm_containers = true

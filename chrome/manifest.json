@@ -1,0 +1,36 @@
+{
+    "manifest_version": 3,
+    "name": "Design Emotion",
+    "version": "1.0",
+    "description": "Extension that attempt to vocalize the design emotions of a web page",
+    "permissions": [
+      "activeTab",
+      "tabs",
+      "storage",
+      "scripting",
+      "downloads"
+    ],
+    "host_permissions": [
+      "https://*.execute-api.eu-west-3.amazonaws.com/*", 
+      "http://localhost:3000/*"
+    ],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+      }
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "commands": {
+      "trigger-transcript": {
+        "suggested_key": {
+          "default": "Ctrl+Shift+Y"
+        },
+        "description": "Design emotion vocalizer"
+      }
+    }
+  }
