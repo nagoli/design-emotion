@@ -268,12 +268,14 @@ def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str)
     # Check Cache
     transcripts = get_cached_design_transcript(url, lang, etag)
     def extract_transcript(transcripts):
+        if not transcripts: 
+            return None
         for (trans_lang, trans_text) in transcripts:
             if trans_lang == lang:
                 logger.info(f"Found transcript in requested language ({lang}) in cache.")
                 return trans_text
 
-        # If we have an transcript but not the requested language, try to translate
+        # If we have a transcript but not the requested language, translate it
         for (trans_lang, trans_text) in transcripts:
             # Translate to requested language
             translated = _translate_with_chatgpt(trans_text, trans_lang, lang)
@@ -322,7 +324,7 @@ def get_cors_headers():
         'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
     }
 
-def lambda_handler(event, context):
+def lambda_handler_transcript(event, context):
     """
     Lambda entry point.  
     Expects JSON input (e.g. via API Gateway) with the following keys:
@@ -376,7 +378,7 @@ def lambda_handler(event, context):
             "body": json.dumps({"error": str(e)})
         }
 
-def lambda_handler_image(event, context):
+def lambda_handler_image_transcript(event, context):
     """
     Lambda entry point for direct image processing.
     Expects JSON input with the following keys:
@@ -446,7 +448,7 @@ def lambda_handler_image(event, context):
             'body': json.dumps({'error': f'Internal server error: {str(e)}'})
         }
 
-def lambda_handler_cache(event, context):
+def lambda_handler_cache_get(event, context):
     """Affiche le contenu complet du cache Redis"""
     try:
         cache_keys = redis_client.keys("*")
@@ -471,6 +473,40 @@ def lambda_handler_cache(event, context):
 
 
         
+def lambda_handler_cache_clear(event, context):
+    try:
+        # Vérifier si une clé spécifique est fournie
+        params = event.get("queryStringParameters", {})
+        specific_key = None
+        if (params) : 
+            specific_key = params.get("key", None)
+        if specific_key:
+            # Supprimer une clé spécifique
+            if redis_client.exists(specific_key):
+                redis_client.delete(specific_key)
+                message = f"Cache key '{specific_key}' deleted successfully"
+            else:
+                message = f"Cache key '{specific_key}' not found"
+        else:
+            # Supprimer tout le cache
+            redis_client.flushall()
+            message = "All cache entries cleared successfully"
+
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': json.dumps({
+                'message': message
+            }, ensure_ascii=False)
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': get_cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
+
+
 if __name__ == "__main__":
     if (False) :
         screen_shot = get_screen_shot("https://www.respiration-yoga.fr")
@@ -487,7 +523,7 @@ if __name__ == "__main__":
             }
         }   
         context = {}
-        response_get = lambda_handler(event_get, context)
+        response_get = lambda_handler_transcript(event_get, context)
         print("Réponse GET :", response_get)
         
     if (True) : 
@@ -503,7 +539,7 @@ if __name__ == "__main__":
             }
         }   
         context = {}
-        response_get = lambda_handler_image(event_get, context)
+        response_get = lambda_handler_image_transcript(event_get, context)
         print("Réponse GET :", response_get)
          
     

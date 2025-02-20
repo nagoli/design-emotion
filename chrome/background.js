@@ -60,6 +60,7 @@ function triggerTranscript() {
           console.log('📦 /transcript Response Data:', data);
           if (data.known === 1 && data.transcript) {
             // Si le transcript est déjà connu, le vocaliser directement
+            console.log('🔊 Speaking in tab:', data.transcript);
             speakInTab(activeTab.id, data.transcript, browserLang);
           } else if (data.known === 0 && data.id) {
             // Sinon, capture un screenshot et envoie-le au serveur
@@ -101,6 +102,7 @@ function triggerTranscript() {
                 .then(data2 => {
                   console.log('📦 /image-transcript Response Data:', data2);
                   if (data2.transcript) {
+                    console.log('🔊 Speaking in tab:', data2.transcript);
                     speakInTab(activeTab.id, data2.transcript, browserLang);
                   }
                 })
@@ -170,6 +172,7 @@ function speakInTab(tabId, text, lang) {
   chrome.scripting.executeScript({
     target: { tabId },
     func: (txt, speechLang) => {
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(txt);
       utterance.lang = speechLang;
       

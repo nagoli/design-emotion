@@ -2,7 +2,7 @@
 
 # Vérifie qu'un paramètre est passé
 if [ -z "$1" ]; then
-  echo "Usage: $0 {transcript|transcript-image|cache}"
+  echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key}"
   exit 1
 fi
 
@@ -24,11 +24,22 @@ case "$1" in
 
   cache)
     echo "Exécution de la commande cache..."
-    curl -X GET "http://localhost:3000/cache" -H "x-api-key: YOUR_API_KEY"
+    curl -X GET "http://localhost:3000/cache/get" -H "x-api-key: YOUR_API_KEY"
     ;;
+
+  clear)
+    echo "Exécution de la commande cache..."
+    curl -X DELETE "http://127.0.0.1:3000/cache/clear"
+    ;;
+
+  clear-key)
+    echo "Exécution de la commande cache..."
+    curl -X DELETE "http://127.0.0.1:3000/cache/clear?key=transcript_cache:https://respiration-yoga.fr/"
+    ;;
+
   *)
     echo "Paramètre non reconnu : $1"
-    echo "Usage: $0 {transcript|transcript-image|cache}"
+    echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key}"
     exit 1
     ;;
 esac

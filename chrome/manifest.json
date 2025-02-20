@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Design Emotion",
     "version": "1.0",
-    "description": "Extension that attempt to vocalize the design emotions of a web page",
+    "description": "Extension that vocalizes the design emotions of a web page",
     "permissions": [
       "activeTab",
       "tabs",
