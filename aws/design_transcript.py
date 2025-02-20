@@ -291,7 +291,7 @@ def create_cached_url_info(url: str, lang: str, etag: str, lastmodifieddate: str
         "etag": etag,
         "lastmodifieddate": lastmodifieddate,
     }
-    redis_client.set(cache_key, json.dumps(cache_value))
+    redis_client.set(cache_key, json.dumps(cache_value), ex=60)
     return short_id
 
 def pop_cached_url_info(short_id: str) -> str:
