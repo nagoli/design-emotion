@@ -40,7 +40,7 @@
             ],
             "Resource": "*"
         },
-        {
+               {
             "Effect": "Allow",
             "Action": [
                 "s3:PutObject",
@@ -48,9 +48,25 @@
                 "s3:ListBucket"
             ],
             "Resource": [
-                "arn:aws:s3:::your-s3-bucket-name/*",
-                "arn:aws:s3:::your-s3-bucket-name"
+                "arn:aws:s3:::design-emotion-code/*",
+                "arn:aws:s3:::design-emotion-code"
             ]
-        }
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:CreateBucket",
+            "Resource": "arn:aws:s3:::design-emotion-code"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:CreateChangeSet",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStackResources"
+            ],
+            "Resource": "*"
+}
     ]
 }

@@ -1,44 +1,44 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-
-Description: Design Emotion Lambda function for analyzing website design emotions
+Description: Design Emotion Lambda functions
 
 Parameters:
   Stage:
     Type: String
-    Default: dev
-    AllowedValues:
-      - dev
-      - prod
+    Default: prod
+    AllowedValues: [dev, prod]
     Description: Stage for deployment
   RedisHost:
     Type: String
-    Default: host.docker.internal
-    Description: Redis host for development
+    Default: crisp-moray-17911.upstash.io
+    Description: Redis host
   RedisPort:
     Type: String
-    Default: 6379
-    Description: Redis port for development
-  OpenAISecretName:
+    Default: "6379"
+    Description: Redis port
+  SecretName:
     Type: String
     Default: openai-key
-    Description: Name of the secret containing OpenAI API key
+    Description: Name of the secret containing API keys
   AWSRegion:
     Type: String
     Default: eu-west-3
     Description: AWS Region
 
+Conditions:
+  IsDevelopment: !Equals [ !Ref Stage, dev ]
+
 Globals:
   Function:
+    Runtime: python3.9
     Timeout: 30
     MemorySize: 512
-    Runtime: python3.9
     Environment:
       Variables:
         STAGE: !Ref Stage
         REDIS_HOST: !Ref RedisHost
         REDIS_PORT: !Ref RedisPort
-        OPENAI_SECRET_NAME: !Ref OpenAISecretName
+        SECRET_NAME: !Ref SecretName
         AWS_REGION: !Ref AWSRegion
 
 Resources:
@@ -47,86 +47,67 @@ Resources:
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_transcript
-      Description: Analyzes website design and generates emotional transcripts
+      Description: Generates emotional transcript from website design
       PackageType: Zip
       Architectures:
         - x86_64
       Policies:
-         - Statement:
+        - Statement:
             - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
+              Action: [ secretsmanager:GetSecretValue ]
               Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
             - Effect: Allow
-              Action:
-                - elasticache:DescribeCacheClusters
-                - elasticache:DescribeReplicationGroups
+              Action: [ elasticache:DescribeCacheClusters, elasticache:DescribeReplicationGroups ]
               Resource: "*"
       Events:
-        DesignTranscriptApi:
+        TranscriptApi:
           Type: Api
           Properties:
             Path: /transcript
             Method: post
-            Cors:
-              AllowMethods: "'OPTIONS,POST'"
-              AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              AllowOrigin: "'*'"
 
   DesignTranscriptWithImageFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_image_transcript
-      Description: Processes direct image uploads and generates emotional transcripts
+      Description: Processes image uploads and generates transcript
       PackageType: Zip
       Architectures:
         - x86_64
       Policies:
-         - Statement:
+        - Statement:
             - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
+              Action: [ secretsmanager:GetSecretValue ]
               Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
       Events:
-        DesignTranscriptWithImageApi:
+        TranscriptWithImageApi:
           Type: Api
           Properties:
             Path: /image-transcript
             Method: post
-            Cors:
-              AllowMethods: "'OPTIONS,POST'"
-              AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              AllowOrigin: "'*'"
 
-  
-
-
-# A RETIRER EN PROD OU A METTRE DERRIERE UNE CLE 
   CacheInspectorFunction:
     Type: AWS::Serverless::Function
+    Condition: IsDevelopment
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_cache_get
-      Description: Inspection du cache Redis
+      Description: Inspect Redis cache (dev only)
       Events:
-        DesignCacheApi:
+        CacheGetApi:
           Type: Api
           Properties:
             Path: /cache/get
             Method: get
-      Policies:
-        - Statement:
-          - Effect: Allow
-            Action:
-              - elasticache:DescribeCacheClusters
-            Resource: "*"
+
   CacheClearFunction:
     Type: AWS::Serverless::Function
+    Condition: IsDevelopment
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_cache_clear
-      Description: Clears the Redis cache, either completely or for a specific key
+      Description: Clears Redis cache (dev only)
       PackageType: Zip
       Architectures:
         - x86_64
@@ -136,26 +117,18 @@ Resources:
           Properties:
             Path: /cache/clear
             Method: delete
-            Cors:
-              AllowMethods: "'OPTIONS,DELETE'"
-              AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              AllowOrigin: "'*'"
-
-
-
 
   DesignEmotionApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref Stage
       Cors:
-        AllowMethods: "'POST, GET, OPTIONS'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-        AllowOrigin: "'*'"
-        ExposeHeaders: "'Content-Type'"
-        MaxAge: "'600'"
+        AllowMethods: "POST,GET,OPTIONS"
+        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key"
+        AllowOrigin: "*"
+        MaxAge: 600
       Auth:
-        ApiKeyRequired: true
+        ApiKeyRequired: false
         UsagePlan:
           CreateUsagePlan: PER_API
           Description: Usage plan for Design Emotion API
@@ -167,14 +140,13 @@ Resources:
             RateLimit: 5
 
 Outputs:
-  DesignEmotionApi:
+  DesignEmotionApiEndpoint:
     Description: "API Gateway endpoint URL"
     Value: !Sub "https://${DesignEmotionApi}.execute-api.${AWSRegion}.amazonaws.com/${Stage}/transcript"
-
-  DesignTranscriptFunction:
-    Description: "Design Transcript Lambda Function ARN"
+  DesignTranscriptFunctionArn:
+    Description: "ARN of DesignTranscriptFunction"
     Value: !GetAtt DesignTranscriptFunction.Arn
+  DesignTranscriptWithImageFunctionArn:
+    Description: "ARN of DesignTranscriptWithImageFunction"
+    Value: !GetAtt DesignTranscriptWithImageFunction.Arn
 
-  DesignTranscriptImageFunction:
-    Description: "Design Transcript Image Lambda Function ARN"
-    Value: !GetAtt DesignTranscriptImageFunction.Arn

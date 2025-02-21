@@ -1,11 +1,10 @@
-from ast import main
+
 import os
 import json
 import logging
-from datetime import datetime, timedelta, timezone
 
-import boto3
 import redis
+import boto3
 
 import openai
 
@@ -31,13 +30,13 @@ if not logger.handlers:
 # Environment variables expected (example):
 #   REDIS_HOST: Host of the Redis cluster (ElastiCache).
 #   REDIS_PORT: Port of the Redis cluster.
-#   OPENAI_SECRET_NAME: Name of the secret in AWS Secrets Manager that holds the OpenAI API key.
+#   SECRET_NAME: Name of the secret in AWS Secrets Manager that holds the OpenAI API key.
 #   AWS_REGION: AWS region where the secret is stored.
 #   PROMPT: Predefined prompt for ChatGPT to analyze the design.
 
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_HOST = os.environ.get("REDIS_HOST", "crisp-moray-17911.upstash.io")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
-OPENAI_SECRET_NAME = os.environ.get("OPENAI_SECRET_NAME", "openai-key")
+SECRET_NAME = os.environ.get("SECRET_NAME", "openai-key")
 AWS_REGION = os.environ.get("AWS_REGION","eu-west-3")
 ID_CACHE_LIMIT = int(os.environ.get("ID_CACHE_LIMIT", "60"))
 tmp_transcript_cache_limit = 60*60*24*15 # 15j
@@ -46,15 +45,74 @@ PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te conce
 """)
 
 
-
-
 # -----------------------------------------------------------------------------
 # Redis Cache Functions
 # -----------------------------------------------------------------------------
 
+_keycache = None 
+def _get_keys():
+    """
+    Retrieves the OpenAI API key from AWS Secrets Manager.
+    Assumes the secret is a JSON with a field named 'API_KEY'.
+    """
+    global _keycache 
+    if _keycache is None :
+        secret_name = SECRET_NAME
+        region_name = AWS_REGION
 
-# Initialize Redis client (ElastiCache)
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        # Create a Secrets Manager client
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region_name
+        )
+
+        try:
+            get_secret_value_response = client.get_secret_value(
+                SecretId=secret_name
+            )
+        except ClientError as e:
+            # For a list of exceptions thrown, see
+            # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+            raise e
+
+        secret = get_secret_value_response['SecretString']
+        _keycache = json.loads(secret)
+    return _keycache
+
+
+# Initialize Redis client
+print("create redis client")
+try:
+    # Configuration pour Upstash en production
+    if REDIS_HOST != "localhost" and REDIS_HOST != "host.docker.internal":
+        redis_client = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            password=_get_keys()['REDIS_KEY'],
+            ssl=True,
+            decode_responses=True
+        )
+        print(f"Connected to Upstash Redis at {REDIS_HOST}")
+    # Configuration locale pour le développement
+    else:
+        redis_client = redis.Redis(
+            host="127.0.0.1",
+            port=REDIS_PORT,
+            decode_responses=True
+        )
+        print(f"Connected to local Redis at {REDIS_HOST}")
+    
+    # Test de connexion
+    redis_client.ping()
+    print("Redis connection test successful")
+    
+except redis.ConnectionError as e:
+    print(f"Failed to connect to Redis: {str(e)}")
+    raise e
+except Exception as e:
+    print(f"Unexpected error while connecting to Redis: {str(e)}")
+    raise e
 
 
 def get_cached_design_transcript(url: str, lang: str, etag: str) -> list ( (str, str)):
@@ -133,37 +191,34 @@ def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: s
     redis_client.set(cache_key, json.dumps(cache_value), ex=TRANSCRIPT_CACHE_LIMIT)
 
 
+# -----------------------------------------------------------------------------
+# Rate Limiting Functions
+# -----------------------------------------------------------------------------
+
+def checkIP(ip: str) -> bool:
+    """
+    Vérifie si une IP peut faire une requête.
+    - Si l'IP n'est pas dans le cache, l'ajoute avec TTL=60s et retourne True
+    - Si l'IP est dans le cache, change le TTL à 120s et retourne False
+    """
+    cache_key = f"iplog:{ip}"
+    
+    # Vérifie si l'IP est dans le cache
+    if redis_client.exists(cache_key):
+        # IP trouvée, on étend le TTL à 120s
+        redis_client.expire(cache_key, 120)
+        return False
+    else:
+        # Nouvelle IP, on l'ajoute avec TTL=60s
+        redis_client.set(cache_key, "1", ex=60)
+        return True
+
 
 # -----------------------------------------------------------------------------
 # LLM Functions
 # -----------------------------------------------------------------------------
 
-def _get_openai_api_key():
-    """
-    Retrieves the OpenAI API key from AWS Secrets Manager.
-    Assumes the secret is a JSON with a field named 'API_KEY'.
-    """
-    secret_name = OPENAI_SECRET_NAME
-    region_name = AWS_REGION
 
-    # Create a Secrets Manager client
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
-
-    try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
-    except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        raise e
-
-    secret = get_secret_value_response['SecretString']
-    return json.loads(secret)["OPENAI_API_KEY"]
 
 def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> str:
     """
@@ -171,12 +226,13 @@ def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> st
     """
     print("translate called")
     logger.info(f"Translating transcript from {source_lang} to {target_lang} via ChatGPT.")
-    client = openai.OpenAI(api_key=_get_openai_api_key())
+    client = openai.OpenAI(api_key=_get_keys()["OPENAI_API_KEY"])
 
     try:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
+                {"role": "system", "content": f"Translate from {source_lang} to {target_lang}"},
                 {"role": "system", "content": f"Translate from {source_lang} to {target_lang}"},
                 {"role": "user", "content": text}
             ]
@@ -203,7 +259,7 @@ def generate_design_transcript(img: bytes, lang: str) -> str:
             api_key=os.environ.get("OPENROUTER_API_KEY"),
         )
     else : 
-        client = openai.OpenAI(api_key=_get_openai_api_key())
+        client = openai.OpenAI(api_key=_get_keys()["OPENAI_API_KEY"])
 
 
     # Convert bytes to base64 string
@@ -388,6 +444,27 @@ def lambda_handler_image_transcript(event, context):
         "lang": <string, optional>
     }
     """
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': ''
+        }
+
+    # Vérification du rate limiting par IP
+    headers = event.get('headers', {})
+    ip_address = headers.get('X-Forwarded-For')
+    if ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+        if not checkIP(ip_address):
+            return {
+                'statusCode': 429,  # Too Many Requests
+                'headers': get_cors_headers(),
+                'body': json.dumps({
+                    'error': 'Rate limit exceeded. Please wait before making another request.'
+                })
+            }
+
     try:
         body = event.get("body")
         if body is None:

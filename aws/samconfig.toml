@@ -8,13 +8,25 @@ version = 0.1
     skip_pull_image = false
 
 [default.deploy.parameters]
-    stack_name = "design-emotion"
-    s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-XXXXXXXXXXXX"
+    stack_name = "design-emotion-dev"
+    s3_bucket = "design-emotion-code"
     s3_prefix = "design-emotion"
     region = "eu-west-3"
     confirm_changeset = true
     capabilities = "CAPABILITY_IAM"
     profile = "default"
+    parameter_overrides = "Stage=dev"
+    image_repositories = []
+
+[prod.deploy.parameters]
+    stack_name = "design-emotion-prod"
+    s3_bucket = "design-emotion-code"
+    s3_prefix = "design-emotion"
+    region = "eu-west-3"
+    confirm_changeset = true
+    capabilities = "CAPABILITY_IAM"
+    profile = "default"
+    parameter_overrides = "Stage=prod"
     image_repositories = []
 
 [default.local_start_api.parameters]

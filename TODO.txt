@@ -1,4 +1,1 @@
-- gerer les id qui resteraient bloquer (par ex purge un fois par jour => generer un id avec date ou voir si redis le gere)
-- verifier le cache il ne semble pas Marketable
 - changer l opacité des popup pendant le screenshot
-- ajouter une limitation a une requete par minute par ip par adresse IP
