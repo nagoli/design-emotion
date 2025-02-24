@@ -30,23 +30,61 @@ Conditions:
 
 Globals:
   Function:
-    Runtime: python3.9
+    Runtime: python3.11
     Timeout: 30
     MemorySize: 512
+    Layers:
+      - !Ref CommonDependenciesLayer
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: design-emotion
+    Description: Design Emotion Lambda functions
+    Author: Olivier
+
+  AWS::SAM::Function:
+    BuildMethod: python3.11
+    Architectures: [x86_64]
+    Handler: app.lambda_handler
+    Runtime: python3.11
+    CodeUri: .
+    AutoPublishAlias: live
     Environment:
       Variables:
         STAGE: !Ref Stage
         REDIS_HOST: !Ref RedisHost
         REDIS_PORT: !Ref RedisPort
         SECRET_NAME: !Ref SecretName
-        AWS_REGION: !Ref AWSRegion
+        AWS_REGION_DEPLOY: !Ref AWSRegion
 
 Resources:
+  CommonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: design-emotion-dependencies
+      Description: Common dependencies for Design Emotion functions
+      ContentUri: dependencies/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: python3.11
+      BuildProperties:
+        UseContainer: false
   DesignTranscriptFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_transcript
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
       Description: Generates emotional transcript from website design
       PackageType: Zip
       Architectures:
@@ -63,6 +101,7 @@ Resources:
         TranscriptApi:
           Type: Api
           Properties:
+            RestApiId: !Ref DesignEmotionApi
             Path: /transcript
             Method: post
 
@@ -71,6 +110,15 @@ Resources:
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_image_transcript
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
       Description: Processes image uploads and generates transcript
       PackageType: Zip
       Architectures:
@@ -84,6 +132,7 @@ Resources:
         TranscriptWithImageApi:
           Type: Api
           Properties:
+            RestApiId: !Ref DesignEmotionApi
             Path: /image-transcript
             Method: post
 
@@ -93,11 +142,21 @@ Resources:
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_cache_get
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
       Description: Inspect Redis cache (dev only)
       Events:
         CacheGetApi:
           Type: Api
           Properties:
+            RestApiId: !Ref DesignEmotionApi
             Path: /cache/get
             Method: get
 
@@ -107,6 +166,15 @@ Resources:
     Properties:
       CodeUri: .
       Handler: design_transcript.lambda_handler_cache_clear
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
       Description: Clears Redis cache (dev only)
       PackageType: Zip
       Architectures:
@@ -115,6 +183,7 @@ Resources:
         CacheClearApi:
           Type: Api
           Properties:
+            RestApiId: !Ref DesignEmotionApi
             Path: /cache/clear
             Method: delete
 
@@ -123,10 +192,10 @@ Resources:
     Properties:
       StageName: !Ref Stage
       Cors:
-        AllowMethods: "POST,GET,OPTIONS"
-        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key"
-        AllowOrigin: "*"
-        MaxAge: 600
+        AllowMethods: "'POST,GET,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
       Auth:
         ApiKeyRequired: false
         UsagePlan:
@@ -149,4 +218,3 @@ Outputs:
   DesignTranscriptWithImageFunctionArn:
     Description: "ARN of DesignTranscriptWithImageFunction"
     Value: !GetAtt DesignTranscriptWithImageFunction.Arn
-

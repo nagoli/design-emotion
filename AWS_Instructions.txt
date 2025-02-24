@@ -63,10 +63,18 @@ crisp-moray-17911.upstash.io
 Créer le bucket s3 si necessaire 
 aws s3 mb s3://design-emotion-code
 
-upload du code sur s3_bucket
-sam package --s3-bucket design-emotion-code --output-template-file packaged.yaml
+# Construction du layer de dépendances
+cd aws
+./build_layer.sh
+cd ..
 
-sam deploy --guided 
-ou 
-sam deploy --template-file /Users/olivier/dev/design-emotion/aws/packaged.yaml --stack-name design-emotion-stack
+# Build des fonctions
+sam build
+
+##upload du code sur s3_bucket
+sam package  --s3-bucket design-emotion-code --output-template-file packaged.yaml
+
+# deploy
+sam deploy --template-file /Users/olivier/dev/design-emotion/aws/packaged.yaml --stack-name design-emotion-dev 
+(voir le nom de la stack dans le samconfig.toml)
 

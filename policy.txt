@@ -60,11 +60,13 @@
         {
             "Effect": "Allow",
             "Action": [
-                "cloudformation:CreateChangeSet",
-                "cloudformation:DescribeChangeSet",
-                "cloudformation:ExecuteChangeSet",
-                "cloudformation:DescribeStacks",
-                "cloudformation:ListStackResources"
+               	"cloudformation:CreateChangeSet",
+				"cloudformation:DescribeChangeSet",
+				"cloudformation:ExecuteChangeSet",
+				"cloudformation:DescribeStacks",
+				"cloudformation:ListStackResources",
+				"cloudformation:DeleteStack",
+				"cloudformation:DescribeStackEvents"
             ],
             "Resource": "*"
 }

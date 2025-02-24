@@ -1,1 +1,1 @@
-- changer l opacité des popup pendant le screenshot
+- rajouter un mode dev et prod different pour le AWS Lambda et le redis pour avoir 2 config différente

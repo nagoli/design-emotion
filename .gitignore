@@ -60,3 +60,8 @@ coverage.xml
 .aws/
 .aws-sam/
 *.pem
+lambda-layer/
+
+# Docker
+.docker/
+.Dockerfile

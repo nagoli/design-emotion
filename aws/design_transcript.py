@@ -37,7 +37,7 @@ if not logger.handlers:
 REDIS_HOST = os.environ.get("REDIS_HOST", "crisp-moray-17911.upstash.io")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 SECRET_NAME = os.environ.get("SECRET_NAME", "openai-key")
-AWS_REGION = os.environ.get("AWS_REGION","eu-west-3")
+AWS_REGION = os.environ.get("AWS_REGION_DEPLOY","eu-west-3")
 ID_CACHE_LIMIT = int(os.environ.get("ID_CACHE_LIMIT", "60"))
 tmp_transcript_cache_limit = 60*60*24*15 # 15j
 TRANSCRIPT_CACHE_LIMIT = int(os.environ.get("TRANSCRIPT_CACHE_LIMIT", str(tmp_transcript_cache_limit)))
