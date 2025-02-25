@@ -68,7 +68,7 @@ Resources:
     Properties:
       LayerName: design-emotion-dependencies
       Description: Common dependencies for Design Emotion functions
-      ContentUri: s3://design-emotion-code/01c1dfd94ba0b5e0f222b5949f9a7b41
+      ContentUri: s3://design-emotion-code/d6ce1a36ac519b2b0d8e3980a51b4cf4
       CompatibleRuntimes:
       - python3.11
       RetentionPolicy: Retain
@@ -80,7 +80,7 @@ Resources:
   DesignTranscriptFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://design-emotion-code/c0fbf17ff85a703ba1a9c22d04da0e70
+      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
       Handler: design_transcript.lambda_handler_transcript
       Runtime: python3.11
       Architectures:
@@ -123,7 +123,7 @@ Resources:
   DesignTranscriptWithImageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://design-emotion-code/c0fbf17ff85a703ba1a9c22d04da0e70
+      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
       Handler: design_transcript.lambda_handler_image_transcript
       Runtime: python3.11
       Architectures:
@@ -162,7 +162,7 @@ Resources:
     Type: AWS::Serverless::Function
     Condition: IsDevelopment
     Properties:
-      CodeUri: s3://design-emotion-code/c0fbf17ff85a703ba1a9c22d04da0e70
+      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
       Handler: design_transcript.lambda_handler_cache_get
       Runtime: python3.11
       Architectures:
@@ -194,7 +194,7 @@ Resources:
     Type: AWS::Serverless::Function
     Condition: IsDevelopment
     Properties:
-      CodeUri: s3://design-emotion-code/c0fbf17ff85a703ba1a9c22d04da0e70
+      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
       Handler: design_transcript.lambda_handler_cache_clear
       Runtime: python3.11
       Architectures:

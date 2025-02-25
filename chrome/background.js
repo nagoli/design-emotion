@@ -2,7 +2,7 @@
 importScripts("config.js");
 
 // Configuration du debugging
-const LOG_SCREENSHOTS = true;  // Mettre à true pour sauvegarder les captures d'écran en PNG
+const LOG_SCREENSHOTS = false;  // Mettre à true pour sauvegarder les captures d'écran en PNG
 
 const browserLang = chrome.i18n.getUILanguage();
 console.log('🌐 Browser language:', browserLang);

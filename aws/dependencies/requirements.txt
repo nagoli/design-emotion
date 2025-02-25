@@ -1,8 +1,8 @@
 # Dépendances essentielles avec versions spécifiques pour réduire la taille
-redis==5.0.1
-openai==1.2.0
-pydantic==2.6.1
-pydantic-core==2.16.2
-typing-extensions==4.9.0
+redis==5.2.1
+openai==1.59.8
+pydantic==2.10.5
+pydantic-core==2.27.2
+typing-extensions==4.12.2
 
 # boto3 est déjà disponible dans l'environnement Lambda

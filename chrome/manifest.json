@@ -1,14 +1,13 @@
 {
     "manifest_version": 3,
-    "name": "Design Emotion",
+    "name": "Design Emotion Vocalizer",
     "version": "1.0",
-    "description": "Extension that vocalizes the design emotions of a web page",
+    "description": "Chrome extension that conveys the design emotions of a web page through speech to enhance the browsing experience for blind users.",
     "permissions": [
       "activeTab",
-      "tabs",
-      "storage",
       "scripting",
-      "downloads"
+      "downloads",
+      "storage"
     ],
     "host_permissions": [
       "https://*.execute-api.eu-west-3.amazonaws.com/*", 

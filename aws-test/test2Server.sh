@@ -21,7 +21,7 @@ case "$1" in
     echo "Exécution de la commande transcript-image..."
     curl -X POST https://$uri/image-transcript \
       -H "Content-Type: application/json" \
-      --data-binary @test2_request.json
+      --data-binary @../aws-test/test2_request.json
     ;;
 
   cache)
