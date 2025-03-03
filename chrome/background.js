@@ -236,7 +236,7 @@ function speakInTab(tabId, text, lang) {
     func: (txt, speechLang) => {
       console.log("SpeakInTab internal func called", speechLang);
       
-      // Créer une région live pour les annonces
+      // Créer une région live pour les annonces d'accessibilité
       const liveRegion = document.createElement('div');
       liveRegion.setAttribute('aria-live', 'polite');
       liveRegion.setAttribute('aria-atomic', 'true');
@@ -249,12 +249,15 @@ function speakInTab(tabId, text, lang) {
       liveRegion.style.clip = 'rect(0, 0, 0, 0)';
       liveRegion.style.whiteSpace = 'nowrap';
       liveRegion.style.border = '0';
+      liveRegion.style.color = 'white';
+      liveRegion.textContent = txt;
       document.body.appendChild(liveRegion);
       
       // Créer le bouton
       const btn = document.createElement('button');
-      btn.textContent = "Click for vocalizing design emotion description : \n" + txt;
-      btn.setAttribute('aria-label', 'Cliquez pour écouter la description : ' + txt);
+      btn.textContent = "Click for design emotion description";
+      btn.setAttribute('aria-label', 'Click for design emotion description with built-in browser voice synthesis');
+      btn.className = 'design-emotion-btn-unique';
       
       // Style pour rendre le bouton visible et accessible
       btn.style.position = "fixed";
@@ -270,11 +273,163 @@ function speakInTab(tabId, text, lang) {
       btn.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
       btn.style.transition = "opacity 0.3s ease";
       
-      // Ajoute le bouton dans la page
+      // Créer la structure de la pop-in
+      const overlayHTML = `
+        <div class="overlay-unique">
+          <div class="popup-unique">
+            <div class="popup-header-unique">
+              <h2>Design Emotion Vocalizer</h2>
+            </div>
+            <div class="popup-body-unique">
+              <p>${txt}</p>
+            </div>
+            <div class="popup-footer-unique">
+              <button class="popup-close-btn-unique">Fermer</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Styles pour la pop-in (en utilisant des classes uniques pour éviter les conflits)
+      const styles = document.createElement('style');
+      styles.textContent = `
+        .overlay-unique {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(255, 255, 255, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 10001;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .overlay-unique.active {
+          opacity: 1;
+          visibility: visible;
+        }
+        
+        .popup-unique {
+          background-color: rgba(0, 0, 0, 1);
+          border-radius: 12px;
+          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+          width: clamp(300px, 80%, 800px);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          transform: scale(0.8);
+          transition: transform 0.3s ease;
+        }
+        
+        .overlay-unique.active .popup-unique {
+          transform: scale(1);
+        }
+        
+        .popup-header-unique {
+          color: white;
+          padding: 8px 16px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+        }
+        
+        .popup-header-unique h2 {
+          margin: 0;
+          color: white
+          font-size: 16px;
+          font-weight: bold;
+        }
+        
+        .popup-body-unique {
+          border-radius: 8px;
+          padding: 16px;
+          color: black;
+          background-color: white;
+          font-family: Arial, sans-serif;
+          font-size: 16px;
+          line-height: 1.5;
+          overflow-y: auto;
+          margin : 0 12px;
+        }
+        
+        .popup-footer-unique {
+          color: white;
+          padding: 8px 16px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+        }
+        
+        .popup-close-btn-unique {
+          background-color: transparent;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        
+        .popup-close-btn-unique:hover {
+          background-color: #0056b3;
+        }
+        
+        .design-emotion-btn-unique:hover {
+          background-color: #0056b3;
+        }
+      `;
+      document.head.appendChild(styles);
+      
+      // Créer la div pour l'overlay
+      const overlayContainer = document.createElement('div');
+      overlayContainer.innerHTML = overlayHTML;
+      document.body.appendChild(overlayContainer.firstElementChild);
+      
+      // Ajouter le bouton dans la page
       document.body.appendChild(btn);
       
-      // Annonce le texte dans la région live
-      liveRegion.textContent = "Design Emotion Vocalizer : " + txt;
+      // Récupérer les éléments de la pop-in
+      const overlay = document.querySelector('.overlay-unique');
+      const closeBtn = document.querySelector('.popup-close-btn-unique');
+      
+      // Fonction pour ouvrir la pop-in
+      const openPopup = () => {
+        overlay.classList.add('active');
+        // Annonce le texte dans la région live pour accessibilité
+        liveRegion.textContent = "Design Emotion Vocalizer : " + txt;
+      };
+      
+      // Fonction pour fermer la pop-in
+      const closePopup = () => {
+        overlay.classList.remove('active');
+      };
+      
+      // Écouteurs d'événements
+      btn.addEventListener('click', openPopup);
+      closeBtn.addEventListener('click', closePopup);
+      
+      // Fermer la pop-in en cliquant en dehors
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          closePopup();
+        }
+      });
+      
+      // Pour accessibilité : fermer avec la touche Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+          closePopup();
+        }
+      });
       
       // Fermeture automatique après 15 secondes
       setTimeout(() => {

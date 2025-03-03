@@ -7,20 +7,92 @@
     body {
       font-family: Arial, sans-serif;
       padding: 10px;
-      min-width: 200px;
+      min-width: 250px;
+      background-color: #fff;
+      color: #000;
+      margin: 0;
+      border-radius: 12px;
+      overflow: hidden;
     }
+    
+    .header {
+      color: #000;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      gap: 10px;
+    }
+    
+    .header-icon {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
+    
+    .content {
+      /* background-color: white; */
+      color: black;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 0 12px;
+    }
+    
     button {
       width: 100%;
       padding: 10px;
-      margin-bottom: 10px;
-      font-size: 16px;
+      font-size: 14px;
       cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background-color: transparent;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+    button:first-child {
+      margin-bottom: 8px;
+    }
+    
+    button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    #vocaliseBtn, #settingsBtn {
+      background-color: #007bff;
+      color: white;
+    }
+    
+    #vocaliseBtn:hover, #settingsBtn:hover {
+      background-color: #0056b3;
+    }
+    
+    .footer {
+      color: #000;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <button id="vocaliseBtn">Vocalise</button>
-  <button id="settingsBtn">Settings</button>
+  <div class="header">
+    <img src="icon16.png" alt="" class="header-icon" />
+    <span>Design Emotion Vocalizer</span>
+    <img src="icon16.png" alt="" class="header-icon" />
+  </div>
+  
+  <div class="content">
+    <button id="vocaliseBtn">Vocalize (Ctrl+Shift+Y)</button>
+    <button id="settingsBtn">Change Shortcut</button>
+  </div>
+  
+  <div class="footer">© 2025 Design Emotion</div>
 
   <script src="popup.js"></script>
 </body>

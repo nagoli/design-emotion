@@ -6,13 +6,14 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-uri="nqeyedpmyc.execute-api.eu-west-3.amazonaws.com/dev"
+uri="https://nqeyedpmyc.execute-api.eu-west-3.amazonaws.com/dev"
+uri="http://localhost:3000"
 
 case "$1" in
 
   transcript)
     echo "Exécution de la commande transcript..."
-    curl -X POST https://$uri/transcript \
+    curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
       -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
     ;;
@@ -26,17 +27,17 @@ case "$1" in
 
   cache)
     echo "Exécution de la commande cache..."
-    curl -X GET "https://$uri/cache/get" -H "x-api-key: YOUR_API_KEY"
+    curl -X GET "$uri/cache/get" -H "x-api-key: YOUR_API_KEY"
     ;;
 
   clear)
     echo "Exécution de la commande cache..."
-    curl -X DELETE "https://$uri/cache/clear"
+    curl -X DELETE "$uri/cache/clear"
     ;;
 
   clear-key)
     echo "Exécution de la commande cache..."
-    curl -X DELETE "https://$uri/cache/clear?key=transcript_cache:https://respiration-yoga.fr/"
+    curl -X DELETE "$uri/cache/clear?key=transcript_cache:https://respiration-yoga.fr/"
     ;;
 
   *)
