@@ -409,7 +409,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
       const btn = document.createElement('button');
       btn.textContent = "Click for design emotion description";
-      btn.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
+      //btn.setAttribute('aria-label', txt); // Cacher aux lecteurs d'écran
       btn.className = 'design-emotion-btn-unique';
       
       // Style pour rendre le bouton visible pour les utilisateurs voyants
@@ -429,7 +429,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       document.body.appendChild(btn);
       
       // Focus automatique sur le bouton quand il apparaît (pour les utilisateurs voyants)
-      btn.focus();
+      //FOCUS : btn.focus();
       
       // Créer la structure de la pop-in
       const overlayHTML = `
@@ -559,7 +559,8 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       // Fonction pour ouvrir la pop-in
       const openPopup = () => {
         overlay.classList.add('active');
-        btn.remove()
+        btn.remove();
+        overlay.querySelector('h2').focus();
       };
       
       // Fonction pour fermer la pop-in
@@ -567,12 +568,13 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
         overlay.classList.remove('active');
         // Redonner le focus à l'élément précédemment focalisé
         if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-          previouslyFocusedElement.focus();
+          //FOCUS : previouslyFocusedElement.focus();
         }
       };
       
       // Annoncer que le résultat est prêt
-      liveRegion.textContent = "Design emotion transcript ready. Click the button to view.";
+      //pourquoi seule cette ajout est vocalisé ? 
+      liveRegion.textContent = txt;
       
       // Écouteurs d'événements
       btn.addEventListener('click', openPopup);
@@ -601,7 +603,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
           
           // Redonner le focus à l'élément précédemment focalisé si le bouton n'a pas été activé
           if (document.activeElement === btn && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-            previouslyFocusedElement.focus();
+            //FOCUS : previouslyFocusedElement.focus();
           }
         }, 300); // Attendre la fin de la transition d'opacité
       }, 5000); // Réduit à 5 secondes pour moins encombrer l'interface
