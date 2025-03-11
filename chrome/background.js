@@ -133,6 +133,11 @@ function updateLoadingMessage(tabId, message) {
       
       if (loadingMessage) loadingMessage.textContent = msg;
       if (liveRegion) liveRegion.textContent = msg;
+
+      // effacer le message après 15s
+      setTimeout(() => {
+        if (loadingMessage) loadingMessage.style.display = 'none';
+      }, 15000);
     },
     args: [message]
   });
@@ -249,9 +254,14 @@ function triggerTranscript() {
             processScreenshotWithModifiedOpacity(activeTab, data.id, serverUrl);
 
           }
+          else {
+            // Si le transcript n'est pas connu, afficher un message d'erreur
+            updateLoadingMessage(activeTab.id, locStrings.error_message);
+          } 
         })
         .catch(err => {
           console.error("❗ Erreur lors du POST transcript:", err);
+          updateLoadingMessage(activeTab.id, locStrings.error_message);
           if (err instanceof Error) {
             console.error('Error details:', {
               message: err.message,
@@ -381,6 +391,7 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
       })
       .catch(err => {
         console.error("❗ Erreur lors du POST image-transcript:", err);
+        updateLoadingMessage(activeTab.id, locStrings.error_message);
         if (err instanceof Error) {
           console.error('Error details:', {
             message: err.message,

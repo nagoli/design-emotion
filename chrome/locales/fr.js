@@ -19,5 +19,6 @@ export const fr = {
   // Messages accessibilité
   "loading_aria_message": "Analyse des émotions provoquées par le design. Veuillez patienter.",
   "transcript_ready_aria_message": "Transcription des émotions provoquées par le design prête.",
+  "error_message": "Une erreur est survenue lors du traitement du design. Veuillez réessayer plus tard."
 };
 

@@ -19,4 +19,5 @@ export const en = {
   // Accessibility messages
   "loading_aria_message": "Analyzing design emotion. Please wait.",
   "transcript_ready_aria_message": "Design emotion transcript ready. Click the button to view.",
+  "error_message": "An error occurred while processing the design. Please try again later."
 };
