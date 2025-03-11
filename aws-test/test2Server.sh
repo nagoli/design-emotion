@@ -2,7 +2,7 @@
 
 # Vérifie qu'un paramètre est passé
 if [ -z "$1" ]; then
-  echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key}"
+  echo "Usage: $0 {transcript|transcript-en|transcript-image|cache|clear|clear-key}"
   exit 1
 fi
 
@@ -18,9 +18,25 @@ case "$1" in
       -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
     ;;
 
+  transcript-en)
+    echo "Exécution de la commande transcript..."
+    curl -X POST $uri/transcript \
+      -H "Content-Type: application/json" \
+      -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
+    ;;
+
+  transcript-fr2)
+    echo "Exécution de la commande transcript..."
+    curl -X POST $uri/transcript \
+      -H "Content-Type: application/json" \
+      -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "francais"}'
+    ;;
+
+
+
   transcript-image)
     echo "Exécution de la commande transcript-image..."
-    curl -X POST https://$uri/image-transcript \
+    curl -X POST $uri/image-transcript \
       -H "Content-Type: application/json" \
       --data-binary @../aws-test/test2_request.json
     ;;

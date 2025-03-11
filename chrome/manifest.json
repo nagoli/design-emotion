@@ -27,7 +27,8 @@
       "48": "icon48.png"
     },
     "background": {
-      "service_worker": "background.js"
+      "service_worker": "background.js",
+      "type": "module"
     },
     "commands": {
       "trigger-transcript": {

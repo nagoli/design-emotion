@@ -1,10 +1,17 @@
 // Inclusion de la configuration par défaut
-importScripts("config.js");
+import { DEFAULT_SERVER_URL } from "./config.js";
 
 // Configuration du debugging
 const LOG_SCREENSHOTS = false;  // Mettre à true pour sauvegarder les captures d'écran en PNG
 
+// Importer la fonction de localisation
+import { getLocalizedStrings } from "./localization.js";
+const locStrings = getLocalizedStrings();
+
 const browserLang = chrome.i18n.getUILanguage();
+
+
+
 console.log('🌐 Browser language:', browserLang);
 
 /**
@@ -14,7 +21,7 @@ console.log('🌐 Browser language:', browserLang);
 function showLoadingSpinner(tabId) {
   chrome.scripting.executeScript({
     target: { tabId },
-    func: () => {
+    func: (locStrings) => {
       // Créer une région live assertive pour les annonces d'accessibilité
       if (!document.querySelector('.live-region-unique')) {
         const liveRegion = document.createElement('div');
@@ -86,7 +93,7 @@ function showLoadingSpinner(tabId) {
         const loadingMessage = document.createElement('span');
         loadingMessage.className = 'loading-message-unique';
         loadingMessage.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
-        loadingMessage.textContent = "Analyzing design emotion...";
+        loadingMessage.textContent = locStrings.analyzing_message;
         
         // Assembler le conteneur de chargement
         loadingContainer.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
@@ -103,8 +110,9 @@ function showLoadingSpinner(tabId) {
       }
       
       // Annoncer le début de l'analyse dans la région live
-      liveRegion.textContent = "Analyzing design emotion...";
-    }
+      liveRegion.textContent = locStrings.loading_aria_message;
+    },
+    args: [locStrings]
   });
 }
 
@@ -131,7 +139,8 @@ function updateLoadingMessage(tabId, message) {
 function hideSpinnerShowButton(tabId) {
   chrome.scripting.executeScript({
     target: { tabId },
-    func: () => {
+    func: (locStrings) => {
+
       const loadingContainer = document.querySelector('.loading-container-unique');
       if (loadingContainer) loadingContainer.style.display = 'none';
       
@@ -140,8 +149,9 @@ function hideSpinnerShowButton(tabId) {
       if (btn) btn.style.display = 'block';
       
       const liveRegion = document.querySelector('.live-region-unique');
-      if (liveRegion) liveRegion.textContent = "Design emotion transcript ready. Click the button to view.";
-    }
+      if (liveRegion) liveRegion.textContent = locStrings.transcript_ready_aria_message;
+    },
+    args: [locStrings]
   });
 }
 
@@ -150,6 +160,25 @@ function hideSpinnerShowButton(tabId) {
  */
 function triggerTranscript() {
     console.log("Design emotion appelé")
+     // Map des codes de langue aux voix disponibles
+  const langMap = {
+    'fr': 'french',
+    'en': 'english',
+    'es': 'spanish',
+    'de': 'german',
+    'it': 'italian',
+    'pt': 'portuguese',
+    'ru': 'russian',
+    'ja': 'japanese',
+    'zh': 'chinese',
+    'ko': 'korean',
+    'ar': 'arabic',
+    'hi': 'hindi'
+  };
+
+  // Convertir le code de langue au format BCP 47
+  const longLang = langMap[browserLang.toLowerCase()] || 'english';
+
   chrome.storage.sync.get("serverUrl", (data) => {
     const serverUrl = data.serverUrl || DEFAULT_SERVER_URL;
     // Récupère l'onglet actif
@@ -181,11 +210,12 @@ function triggerTranscript() {
           return;
         }
         const pageInfo = results[0].result;
+
         const payload = {
           url: pageUrl,
           etag: pageInfo.etag,
           lastmodifieddate: pageInfo.lastModified,
-          lang: browserLang
+          lang: longLang
         };
 
         // Envoie du POST pour récupérer le statut known et éventuellement un id
@@ -363,20 +393,7 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
  */
 function speakInTab(tabId, text, lang, skipSpinner = false) {
   console.log("SpeakInTab called");
-  // Map des codes de langue aux voix disponibles
-  const langMap = {
-    'fr': 'fr-FR',
-    'french': 'fr-FR',
-    'en': 'en-US',
-    'english': 'en-US',
-    'es': 'es-ES',
-    'spanish': 'es-ES',
-    'de': 'de-DE',
-    'german': 'de-DE'
-  };
-
-  // Convertir le code de langue au format BCP 47
-  const bcp47Lang = langMap[lang.toLowerCase()] || 'en-US';
+ 
 
   // D'abord, masquer le spinner existant
   chrome.scripting.executeScript({
@@ -392,7 +409,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
   
   chrome.scripting.executeScript({
     target: { tabId },
-    func: (txt, speechLang) => {
+    func: (txt, speechLang, locStrings) => {
       console.log("SpeakInTab internal func called", speechLang);
       
       // Récupérer la région live pour vocaliser le transcript
@@ -408,7 +425,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       
       // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
       const btn = document.createElement('button');
-      btn.textContent = "Click for design emotion description";
+      btn.textContent = locStrings.click_for_description;
       //btn.setAttribute('aria-label', txt); // Cacher aux lecteurs d'écran
       btn.className = 'design-emotion-btn-unique';
       
@@ -436,13 +453,13 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
         <div class="overlay-unique">
           <div class="popup-unique">
             <div class="popup-header-unique">
-              <h2>Design Emotion Vocalizer</h2>
+              <h2>${locStrings.popup_header}</h2>
             </div>
             <div class="popup-body-unique">
               <p>${txt}</p>
             </div>
             <div class="popup-footer-unique">
-              <button class="popup-close-btn-unique">Fermer</button>
+              <button class="popup-close-btn-unique">${locStrings.close_button}</button>
             </div>
           </div>
         </div>
@@ -649,7 +666,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       }
     });
     },
-    args: [text, bcp47Lang]
+    args: [text, lang, locStrings]
   });
 
 }

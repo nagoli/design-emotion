@@ -80,7 +80,7 @@ Resources:
   DesignTranscriptFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
+      CodeUri: s3://design-emotion-code/729bda485533244a88aecf9ba6f9b142
       Handler: design_transcript.lambda_handler_transcript
       Runtime: python3.11
       Architectures:
@@ -123,7 +123,7 @@ Resources:
   DesignTranscriptWithImageFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
+      CodeUri: s3://design-emotion-code/729bda485533244a88aecf9ba6f9b142
       Handler: design_transcript.lambda_handler_image_transcript
       Runtime: python3.11
       Architectures:
@@ -162,7 +162,7 @@ Resources:
     Type: AWS::Serverless::Function
     Condition: IsDevelopment
     Properties:
-      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
+      CodeUri: s3://design-emotion-code/729bda485533244a88aecf9ba6f9b142
       Handler: design_transcript.lambda_handler_cache_get
       Runtime: python3.11
       Architectures:
@@ -194,7 +194,7 @@ Resources:
     Type: AWS::Serverless::Function
     Condition: IsDevelopment
     Properties:
-      CodeUri: s3://design-emotion-code/d062b1516c5eaf6b544484a655038b22
+      CodeUri: s3://design-emotion-code/729bda485533244a88aecf9ba6f9b142
       Handler: design_transcript.lambda_handler_cache_clear
       Runtime: python3.11
       Architectures:

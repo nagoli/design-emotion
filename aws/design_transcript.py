@@ -182,6 +182,30 @@ def pop_cached_url_info(short_id: str) -> str:
 def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: str) -> None:
     logger.info("Storing transcript in cache.")
     cache_key = f"transcript_cache:{url}"
+    
+    # Check if an entry already exists
+    existing_cache = redis_client.get(cache_key)
+    if existing_cache:
+        existing_value = json.loads(existing_cache)
+        # If same etag, update the transcripts list
+        if existing_value.get("etag") == etag:
+            # Check if this language already exists in the transcripts
+            transcripts = existing_value.get("transcripts", [])
+            for i, (existing_lang, _) in enumerate(transcripts):
+                if existing_lang == lang:
+                    # Replace existing language entry
+                    transcripts[i] = (lang, transcript)
+                    break
+            else:
+                # Language not found, append it
+                transcripts.append((lang, transcript))
+            
+            # Update cache with modified transcripts
+            existing_value["transcripts"] = transcripts
+            redis_client.set(cache_key, json.dumps(existing_value), ex=TRANSCRIPT_CACHE_LIMIT)
+            return
+    
+    # No existing cache or different etag, create new entry
     cache_value = {
         "etag": etag,
         "transcripts": [
@@ -230,10 +254,9 @@ def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> st
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": f"Translate from {source_lang} to {target_lang}"},
-                {"role": "system", "content": f"Translate from {source_lang} to {target_lang}"},
+                {"role": "system", "content": f"Translate from {source_lang} to {target_lang}. If it is the same language, just return the given text with no additionnal comment. If you translate, just return the translation with no additionnal comment."},
                 {"role": "user", "content": text}
             ]
         )
@@ -336,9 +359,7 @@ def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str)
             # Translate to requested language
             translated = _translate_with_chatgpt(trans_text, trans_lang, lang)
             # Update cache with the newly translated transcript
-            transcripts.append((lang, translated))
-            cache_data["transcripts"] = transcripts
-            redis_client.set(cache_key, json.dumps(cache_data), keepttl=True)
+            store_cached_design_transcript(url, lang, etag, translated)
             logger.info(f"Added translated transcript ({lang}) to cache.")
             return translated
         return None
