@@ -76,6 +76,7 @@ function showLoadingSpinner(tabId) {
         loadingContainer.style.display = "flex";
         loadingContainer.style.alignItems = "center";
         loadingContainer.style.justifyContent = "center";
+
         
         // Créer le spinner (visible mais caché des lecteurs d'écran)
         const spinner = document.createElement('div');
@@ -88,12 +89,16 @@ function showLoadingSpinner(tabId) {
         spinner.style.borderRadius = "50%";
         spinner.style.borderTop = "3px solid #fff";
         spinner.style.animation = "spin-unique 1s linear infinite";
+
         
         // Créer le message de chargement (visible mais caché des lecteurs d'écran)
         const loadingMessage = document.createElement('span');
         loadingMessage.className = 'loading-message-unique';
         loadingMessage.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
         loadingMessage.textContent = locStrings.analyzing_message;
+        loadingMessage.style.fontFamily = "monospace";
+        loadingMessage.style.fontSize = "14px";
+        loadingMessage.style.fontWeight = "bold";
         
         // Assembler le conteneur de chargement
         loadingContainer.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
@@ -443,6 +448,9 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       btn.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
       btn.style.transition = "opacity 0.3s ease";
       btn.style.display = "block"; // Le bouton est visible par défaut dans cette fonction
+      btn.style.fontFamily = "monospace";
+      btn.style.fontSize = "14px";
+      btn.style.fontWeight = "bold";
       document.body.appendChild(btn);
       
       // Focus automatique sur le bouton quand il apparaît (pour les utilisateurs voyants)
@@ -517,9 +525,10 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
         
         .popup-header-unique h2 {
           margin: 0;
-          color: white
-          font-size: 16px;
+          color: white;
+          font-size: 25px;
           font-weight: bold;
+          font-family: monospace;
         }
         
         .popup-body-unique {
@@ -527,7 +536,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
           padding: 16px;
           color: black;
           background-color: white;
-          font-family: Arial, sans-serif;
+          font-family: monospace;
           font-size: 16px;
           line-height: 1.5;
           overflow-y: auto;
