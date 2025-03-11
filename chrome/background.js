@@ -104,7 +104,7 @@ function showLoadingSpinner(tabId) {
         // Réinitialiser le message si le conteneur existe déjà
         const loadingMessage = loadingContainer.querySelector('.loading-message-unique');
         if (loadingMessage) {
-          loadingMessage.textContent = "Analyzing design emotion...";
+          loadingMessage.textContent = locStrings.analyzing_message2;
         }
         loadingContainer.style.display = "flex";
       }
@@ -233,14 +233,14 @@ function triggerTranscript() {
           console.log('📦 /transcript Response Data:', data);
           if (data.known === 1 && data.transcript) {
             // Si le transcript est déjà connu, mettre à jour le message et le vocaliser directement
-            updateLoadingMessage(activeTab.id, "Generating transcript...");
+            updateLoadingMessage(activeTab.id, locStrings.transcript_ready_message);
             // Attendre un court instant pour montrer le message de génération
             setTimeout(() => {
               speakInTab(activeTab.id, data.transcript, browserLang, true);
             }, 1000);
           } else if (data.known === 0 && data.id) {
             // Sinon, mettre à jour le message puis capturer un screenshot et l'envoyer au serveur
-            updateLoadingMessage(activeTab.id, "Generating transcript...");
+            updateLoadingMessage(activeTab.id,locStrings.analyzing_message2);
             processScreenshotWithModifiedOpacity(activeTab, data.id, serverUrl);
 
           }
@@ -582,6 +582,9 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
       
       // Fonction pour fermer la pop-in
       const closePopup = () => {
+        // Arrêter toute synthèse vocale en cours
+        window.speechSynthesis.cancel();
+        
         overlay.classList.remove('active');
         // Redonner le focus à l'élément précédemment focalisé
         if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
@@ -623,7 +626,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
             //FOCUS : previouslyFocusedElement.focus();
           }
         }, 300); // Attendre la fin de la transition d'opacité
-      }, 5000); // Réduit à 5 secondes pour moins encombrer l'interface
+      }, 20000); // Réduit à 20 secondes pour moins encombrer l'interface
       
       // Annuler le timeout si le bouton est cliqué
       btn.addEventListener('click', () => {

@@ -7,20 +7,17 @@ export const fr = {
   "footer_copyright": "© 2025 Design Emotion",
   
   // Messages de chargement et d'analyse
-  "analyzing_message": "Analyse des émotions provoquées par le design en cours...",
+  "analyzing_message": "Analyse des émotions provoquées par le design...",
+  "analyzing_message2": "La transcription des émotions provoquées par le design est en cours...",
   "transcript_ready_message": "Transcription des émotions du design prête",
-  "click_for_description": "Cliquez pour la description des émotions provoquées par le design",
+  "click_for_description": "Cliquez pour écouter la transcription des intentions du design de ce site",
   
   // Popup de transcription
   "popup_header": "Design Emotion Vocalizer",
   "close_button": "Fermer",
   
   // Messages accessibilité
-  "loading_aria_message": "Analyse des émotions provoquées par le design en cours. Veuillez patienter.",
-  "transcript_ready_aria_message": "Transcription des émotions provoquées par le design prête. Appuyez sur le bouton pour l'afficher.",
+  "loading_aria_message": "Analyse des émotions provoquées par le design. Veuillez patienter.",
+  "transcript_ready_aria_message": "Transcription des émotions provoquées par le design prête.",
 };
 
-// Export pour utilisation dans l'extension
-if (typeof module !== 'undefined') {
-  module.exports = fr;
-}

@@ -35,12 +35,6 @@ zip -r function.zip design_transcript.py
 2. Create Lambda function with Python 3.8 runtime
 3. Configure S3 trigger for input bucket
 
-## Example Transcript
-```
-[Design Review 2025-02-16]
-Participant A: I'm concerned about the color scheme accessibility
-Participant B: Let's run contrast checks on the primary palette
-```
 
 ## License
 MIT License
