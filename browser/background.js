@@ -565,6 +565,32 @@ browser.commands.onCommand.addListener((command) => {
 browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "triggerTranscript") {
     triggerTranscript();
+  } else if (msg.action === "openSettings") {
+    // Gestion spécifique pour Firefox - ouvrir les paramètres d'extension
+    if (navigator.userAgent.indexOf("Firefox") !== -1) {
+      // Ouvrir la page de gestion des extensions de Firefox
+      try {
+        // Méthode 1: Tenter d'ouvrir directement la page des paramètres
+        browser.runtime.openOptionsPage().catch(error => {
+          console.log("Impossible d'ouvrir les options, essai alternatif:", error);
+          
+          // Méthode 2: Ouvrir la page de gestion des modules complémentaires
+          browser.management.getSelf().then(selfInfo => {
+            browser.tabs.create({
+              url: `https://support.mozilla.org/kb/manage-extension-shortcuts-firefox`
+            });
+          }).catch(err => {
+            console.error("Impossible d'ouvrir les paramètres de l'extension:", err);
+          });
+        });
+      } catch (error) {
+        console.error("Erreur lors de la tentative d'ouverture des paramètres:", error);
+        // Méthode 3: En dernier recours, ouvrir la page d'aide de Firefox
+        browser.tabs.create({
+          url: `https://support.mozilla.org/kb/keyboard-shortcuts-perform-firefox-tasks-quickly`
+        });
+      }
+    }
   }
 });
 

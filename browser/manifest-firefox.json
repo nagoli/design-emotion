@@ -40,7 +40,8 @@
     "commands": {
       "trigger-transcript": {
         "suggested_key": {
-          "default": "Ctrl+Shift+Y"
+          "default": "Ctrl+Shift+Y",
+          "mac": "Ctrl+Shift+Y"
         },
         "description": "Design emotion vocalizer"
       }

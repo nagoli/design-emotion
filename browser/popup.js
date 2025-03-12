@@ -23,8 +23,18 @@ window.initializeLocalization = function() {
   });
   
   document.getElementById("settingsBtn").addEventListener("click", () => {
-    // Ouvre la page des raccourcis Chrome pour permettre la configuration du raccourci clavier
-    browser.tabs.create({ url: "chrome://extensions/shortcuts" });
+    // Ouvre la page des raccourcis selon le navigateur
+    try {
+      if (navigator.userAgent.indexOf("Firefox") !== -1) {
+        // Firefox - Use browser.runtime.openOptionsPage or navigate to extension management
+        browser.runtime.sendMessage({ action: "openSettings" });
+      } else {
+        // Chrome
+        chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+      }
+    } catch (error) {
+      console.error("Error opening settings:", error);
+    }
     // Ferme la popup
     window.close();
   });
