@@ -278,6 +278,122 @@ function initPopup(tabId,txt) {
   });
 }
 
+function addButtonAndPopupInteractions(tabId, text, speechLang){
+  chrome.scripting.executeScript({
+    target: { tabId },
+    func: (txt, speechLang, locStrings) => {
+      
+      // Stocker l'élément actuellement focalisé pour y revenir plus tard
+      const previouslyFocusedElement = document.activeElement;
+      
+      
+      // Focus automatique sur le bouton quand il apparaît (pour les utilisateurs voyants)
+      //FOCUS : btn.focus();
+      
+    
+      
+      // Récupérer les éléments de la pop-in
+      const overlay = document.querySelector('.overlay-unique');
+      const closeBtn = document.querySelector('.popup-close-btn-unique');
+      const btn = document.querySelector('.design-emotion-btn-unique');
+      
+      // Fonction pour ouvrir la pop-in
+      const openPopup = () => {
+        overlay.classList.add('active');
+        btn.remove();
+        overlay.querySelector('h2').focus();
+      };
+      
+      // Fonction pour fermer la pop-in
+      const closePopup = () => {
+        // Arrêter toute synthèse vocale en cours
+        window.speechSynthesis.cancel();
+        
+        overlay.classList.remove('active');
+        // Redonner le focus à l'élément précédemment focalisé
+        if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
+          //FOCUS : previouslyFocusedElement.focus();
+        }
+      };
+      
+      
+      // Écouteurs d'événements
+      btn.addEventListener('click', openPopup);
+      closeBtn.addEventListener('click', closePopup);
+      
+      // Fermer la pop-in en cliquant en dehors
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          closePopup();
+        }
+      });
+      
+      // Pour accessibilité : fermer avec la touche Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+          closePopup();
+        }
+      });
+      
+      // Fermeture automatique après 5 secondes si pas d'interaction
+      let buttonTimeout = setTimeout(() => {
+        btn.style.opacity = '0';
+        setTimeout(() => {
+          btn.remove();
+          // Ne pas retirer les régions live car elles peuvent être réutilisées
+          
+          // Redonner le focus à l'élément précédemment focalisé si le bouton n'a pas été activé
+          if (document.activeElement === btn && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
+            //FOCUS : previouslyFocusedElement.focus();
+          }
+        }, 300); // Attendre la fin de la transition d'opacité
+      }, 20000); // Réduit à 20 secondes pour moins encombrer l'interface
+      
+      // Annuler le timeout si le bouton est cliqué
+      btn.addEventListener('click', () => {
+        clearTimeout(buttonTimeout);
+      });
+    
+    // Lors du clic, déclenche la synthèse vocale
+    btn.addEventListener('click', function() {
+      
+      // Annule toute synthèse en cours
+      window.speechSynthesis.cancel();
+  
+      // Crée l'utterance avec le texte et la langue souhaitée
+      const utterance = new SpeechSynthesisUtterance(txt);
+      utterance.lang = speechLang;
+  
+      // Fonction pour configurer et lancer la vocalisation
+      const speakWhenReady = () => {
+        const voices = window.speechSynthesis.getVoices();
+        // Choisit une voix correspondant à la langue si possible
+        const voice = voices.find(v => v.lang.startsWith(speechLang.split('-')[0])) || voices[0];
+        if (voice) {
+          utterance.voice = voice;
+        }
+        console.log("Speaking in tab:", txt);
+        window.speechSynthesis.speak(utterance);
+      };
+  
+      // Si aucune voix n'est encore chargée, attend l'événement 'voiceschanged'
+      if (window.speechSynthesis.getVoices().length === 0) {
+        console.log("Waiting for voices to load...");
+        window.speechSynthesis.onvoiceschanged = () => {
+          speakWhenReady();
+          // Nettoyage de l'écouteur pour éviter plusieurs appels
+          window.speechSynthesis.onvoiceschanged = null;
+        };
+      } else {
+        // Optionnel : laisser un petit délai après l'annulation
+        setTimeout(speakWhenReady, 100);
+      }
+    });
+    },
+    args: [text, speechLang, locStrings]
+  });
+}
+
 
 /**
  * Met à jour le message de chargement
@@ -571,7 +687,6 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
 function speakInTab(tabId, text, lang, skipSpinner = false) {
   console.log("SpeakInTab called");
  
-
   // D'abord, masquer le spinner existant
   chrome.scripting.executeScript({
     target: { tabId },
@@ -595,120 +710,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
   });
   initShowButton(tabId);
   initPopup(tabId, text);
-
-  chrome.scripting.executeScript({
-    target: { tabId },
-    func: (txt, speechLang, locStrings) => {
-      
-      // Stocker l'élément actuellement focalisé pour y revenir plus tard
-      const previouslyFocusedElement = document.activeElement;
-      
-      
-      // Focus automatique sur le bouton quand il apparaît (pour les utilisateurs voyants)
-      //FOCUS : btn.focus();
-      
-    
-      
-      // Récupérer les éléments de la pop-in
-      const overlay = document.querySelector('.overlay-unique');
-      const closeBtn = document.querySelector('.popup-close-btn-unique');
-      const btn = document.querySelector('.design-emotion-btn-unique');
-      
-      // Fonction pour ouvrir la pop-in
-      const openPopup = () => {
-        overlay.classList.add('active');
-        btn.remove();
-        overlay.querySelector('h2').focus();
-      };
-      
-      // Fonction pour fermer la pop-in
-      const closePopup = () => {
-        // Arrêter toute synthèse vocale en cours
-        window.speechSynthesis.cancel();
-        
-        overlay.classList.remove('active');
-        // Redonner le focus à l'élément précédemment focalisé
-        if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-          //FOCUS : previouslyFocusedElement.focus();
-        }
-      };
-      
-      
-      // Écouteurs d'événements
-      btn.addEventListener('click', openPopup);
-      closeBtn.addEventListener('click', closePopup);
-      
-      // Fermer la pop-in en cliquant en dehors
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          closePopup();
-        }
-      });
-      
-      // Pour accessibilité : fermer avec la touche Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('active')) {
-          closePopup();
-        }
-      });
-      
-      // Fermeture automatique après 5 secondes si pas d'interaction
-      let buttonTimeout = setTimeout(() => {
-        btn.style.opacity = '0';
-        setTimeout(() => {
-          btn.remove();
-          // Ne pas retirer les régions live car elles peuvent être réutilisées
-          
-          // Redonner le focus à l'élément précédemment focalisé si le bouton n'a pas été activé
-          if (document.activeElement === btn && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-            //FOCUS : previouslyFocusedElement.focus();
-          }
-        }, 300); // Attendre la fin de la transition d'opacité
-      }, 20000); // Réduit à 20 secondes pour moins encombrer l'interface
-      
-      // Annuler le timeout si le bouton est cliqué
-      btn.addEventListener('click', () => {
-        clearTimeout(buttonTimeout);
-      });
-    
-    // Lors du clic, déclenche la synthèse vocale
-    btn.addEventListener('click', function() {
-      
-      // Annule toute synthèse en cours
-      window.speechSynthesis.cancel();
-  
-      // Crée l'utterance avec le texte et la langue souhaitée
-      const utterance = new SpeechSynthesisUtterance(txt);
-      utterance.lang = speechLang;
-  
-      // Fonction pour configurer et lancer la vocalisation
-      const speakWhenReady = () => {
-        const voices = window.speechSynthesis.getVoices();
-        // Choisit une voix correspondant à la langue si possible
-        const voice = voices.find(v => v.lang.startsWith(speechLang.split('-')[0])) || voices[0];
-        if (voice) {
-          utterance.voice = voice;
-        }
-        console.log("Speaking in tab:", txt);
-        window.speechSynthesis.speak(utterance);
-      };
-  
-      // Si aucune voix n'est encore chargée, attend l'événement 'voiceschanged'
-      if (window.speechSynthesis.getVoices().length === 0) {
-        console.log("Waiting for voices to load...");
-        window.speechSynthesis.onvoiceschanged = () => {
-          speakWhenReady();
-          // Nettoyage de l'écouteur pour éviter plusieurs appels
-          window.speechSynthesis.onvoiceschanged = null;
-        };
-      } else {
-        // Optionnel : laisser un petit délai après l'annulation
-        setTimeout(speakWhenReady, 100);
-      }
-    });
-    },
-    args: [text, lang, locStrings]
-  });
+  addButtonAndPopupInteractions(tabId, text, lang);
 
 }
 
