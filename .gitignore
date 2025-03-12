@@ -65,3 +65,6 @@ lambda-layer/
 # Docker
 .docker/
 .Dockerfile
+
+# Browser extensions    
+browser-build/

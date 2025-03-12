@@ -8,7 +8,10 @@ const LOG_SCREENSHOTS = false;  // Mettre à true pour sauvegarder les captures 
 import { getLocalizedStrings } from "./localization.js";
 const locStrings = getLocalizedStrings();
 
-const browserLang = chrome.i18n.getUILanguage();
+// Add this at the top of your background.js and other scripts
+const browser = chrome || window.browser;
+
+const browserLang = browser.i18n.getUILanguage();
 
 
 
@@ -20,7 +23,7 @@ console.log('🌐 Browser language:', browserLang);
  */
 
 function initLoadingSpinner(tabId) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: () => {
       if (!document.querySelector('#spinner-animation-unique')) {
@@ -87,7 +90,7 @@ function initLoadingSpinner(tabId) {
 
 
 function initLiveRegion(tabId) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: () => {
       // Créer une région live assertive pour les annonces d'accessibilité
@@ -114,7 +117,7 @@ function initLiveRegion(tabId) {
 
 
 function initShowButton(tabId) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (locStrings) => {
         // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
@@ -149,7 +152,7 @@ function initShowButton(tabId) {
 
 function initPopup(tabId,txt) {
 
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (locStrings, txt) => {
         // Créer la structure de la pop-in
@@ -279,7 +282,7 @@ function initPopup(tabId,txt) {
 }
 
 function addButtonAndPopupInteractions(tabId, text, speechLang){
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (txt, speechLang, locStrings) => {
       
@@ -399,7 +402,7 @@ function addButtonAndPopupInteractions(tabId, text, speechLang){
  * Met à jour le message de chargement
  */
 function updateLoadingMessage(tabId, message) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (msg) => {
       const loadingContainer = document.querySelector('.loading-container-unique');
@@ -424,7 +427,7 @@ function updateLoadingMessage(tabId, message) {
  * Cache le spinner et affiche le bouton
  */
 function hideSpinnerShowButton(tabId) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (locStrings) => {
 
@@ -465,10 +468,10 @@ function triggerTranscript() {
   // Convertir le code de langue au format BCP 47
   const longLang = langMap[browserLang.toLowerCase()] || 'english';
 
-  chrome.storage.sync.get("serverUrl", (data) => {
+  browser.storage.sync.get("serverUrl", (data) => {
     const serverUrl = data.serverUrl || DEFAULT_SERVER_URL;
     // Récupère l'onglet actif
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (!tabs || !tabs.length) return;
       const activeTab = tabs[0];
       const pageUrl = activeTab.url;
@@ -481,7 +484,7 @@ function triggerTranscript() {
       // Récupérer les infos de la page et la langue du navigateur
       updateLoadingMessage(activeTab.id, locStrings.analyzing_message);
       
-      chrome.scripting.executeScript({
+      browser.scripting.executeScript({
         target: { tabId: activeTab.id },
         func: () => {
           return {
@@ -492,7 +495,7 @@ function triggerTranscript() {
           };
         }
       }, (results) => {
-        if (chrome.runtime.lastError || !results || !results[0]) {
+        if (browser.runtime.lastError || !results || !results[0]) {
           console.error("Erreur lors de l'exécution du script dans la page.");
           return;
         }
@@ -552,14 +555,14 @@ function triggerTranscript() {
 }
 
 // Écoute du raccourci clavier défini dans manifest.json
-chrome.commands.onCommand.addListener((command) => {
+browser.commands.onCommand.addListener((command) => {
   if (command === "trigger-transcript") {
     triggerTranscript();
   }
 });
 
 // Écoute des messages provenant de la popup
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "triggerTranscript") {
     triggerTranscript();
   }
@@ -606,13 +609,13 @@ function restoreOriginalOpacity() {
  * Capture un screenshot avec les opacités modifiées.
  */
 function processScreenshotWithModifiedOpacity(activeTab, id, serverUrl) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId: activeTab.id },
     func: modifyFixedElementsOpacity
   }, () => {
-    chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
-      if (chrome.runtime.lastError || !dataUrl) {
-        console.error("Erreur lors de la capture d'écran:", chrome.runtime.lastError);
+    browser.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
+      if (browser.runtime.lastError || !dataUrl) {
+        console.error("Erreur lors de la capture d'écran:", browser.runtime.lastError);
         return;
       }
       
@@ -626,7 +629,7 @@ function processScreenshotWithModifiedOpacity(activeTab, id, serverUrl) {
  * Restaure l'opacité originale et traite l'image capturée.
  */
 function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId: activeTab.id },
     func: restoreOriginalOpacity
   }, () => {
@@ -688,7 +691,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
   console.log("SpeakInTab called");
  
   // D'abord, masquer le spinner existant
-  chrome.scripting.executeScript({
+  browser.scripting.executeScript({
     target: { tabId },
     func: (txt) => {
       // Supprimer tout spinner existant pour éviter les doublons
@@ -787,7 +790,7 @@ async function saveBase64AsPNG(base64Data, filename) {
     const reader = new FileReader();
     reader.readAsDataURL(blob);
     reader.onloadend = () => {
-      chrome.downloads.download({
+      browser.downloads.download({
         url: reader.result,
         filename: filename,
         saveAs: false
