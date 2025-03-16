@@ -1,0 +1,20 @@
+{
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "design-emotion-vocalizer@design-emotion.org",
+      "strict_min_version": "112.0",
+      "update_url": "https://design-emotion.org/plugins/firefox/update.json"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "tabs"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "type": "module"
+  }
+}

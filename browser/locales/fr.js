@@ -2,7 +2,7 @@
 export const fr = {
   // Popup
   "popup_title": "Design Emotion Vocalizer",
-  "vocalize_button": "Vocaliser (Ctrl+Maj+Y)",
+  "vocalize_button": "Vocaliser (Alt+Shift+Y)",
   "change_shortcut_button": "Modifier le raccourci",
   "footer_copyright": "© 2025 Design Emotion",
   

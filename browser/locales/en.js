@@ -2,7 +2,7 @@
 export const en = {
   // Popup
   "popup_title": "Design Emotion Vocalizer",
-  "vocalize_button": "Vocalize (Ctrl+Shift+Y)",
+  "vocalize_button": "Vocalize (Alt+Shift+Y)",
   "change_shortcut_button": "Change Shortcut",
   "footer_copyright": "© 2025 Design Emotion",
   

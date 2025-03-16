@@ -8,14 +8,15 @@ set -e  # Exit on error
 # Configuration
 SOURCE_DIR="./browser"
 BUILD_DIR="./browser-build"
-CHROME_MANIFEST="${SOURCE_DIR}/manifest-chrome.json"
-FIREFOX_MANIFEST="${SOURCE_DIR}/manifest-firefox.json"
+COMMON_MANIFEST="${SOURCE_DIR}/manifest.json"
+CHROME_SPECIFIC="${SOURCE_DIR}/manifest-chrome-specific.json"
+FIREFOX_SPECIFIC="${SOURCE_DIR}/manifest-firefox-specific.json"
 
 # Create build directory
 mkdir -p "${BUILD_DIR}"
 
-# Extract version from manifest
-VERSION=$(grep -o '"version": "[^"]*"' "${CHROME_MANIFEST}" | cut -d '"' -f 4)
+# Extract version from common manifest
+VERSION=$(grep -o '"version": "[^"]*"' "${COMMON_MANIFEST}" | cut -d '"' -f 4)
 echo "Building extensions version ${VERSION}..."
 
 # Define zip filenames
@@ -34,8 +35,16 @@ cp -r "${SOURCE_DIR}"/*.svg "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.png "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}/locales" "${CHROME_BUILD_DIR}/"
 
-# Use Chrome manifest
-cp "${CHROME_MANIFEST}" "${CHROME_BUILD_DIR}/manifest.json"
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+  echo "Error: jq is required but not installed. Please install jq first."
+  echo "On macOS: brew install jq"
+  echo "On Ubuntu/Debian: apt-get install jq"
+  exit 1
+fi
+
+# Merge common manifest with Chrome-specific parts
+jq -s '.[0] * .[1]' "${COMMON_MANIFEST}" "${CHROME_SPECIFIC}" > "${CHROME_BUILD_DIR}/manifest.json"
 
 # Create Chrome zip
 cd "${CHROME_BUILD_DIR}"
@@ -54,8 +63,8 @@ cp -r "${SOURCE_DIR}"/*.svg "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.png "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}/locales" "${FIREFOX_BUILD_DIR}/"
 
-# Use Firefox manifest
-cp "${FIREFOX_MANIFEST}" "${FIREFOX_BUILD_DIR}/manifest.json"
+# Merge common manifest with Firefox-specific parts
+jq -s '.[0] * .[1]' "${COMMON_MANIFEST}" "${FIREFOX_SPECIFIC}" > "${FIREFOX_BUILD_DIR}/manifest.json"
 
 # Create Firefox zip
 cd "${FIREFOX_BUILD_DIR}"

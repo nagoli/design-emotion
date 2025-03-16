@@ -1,10 +1,14 @@
 {
-    "votre_extension_id@example.com": {
-      "updates": [
-        {
-          "version": "1.1",
-          "update_link": "https://votre-domaine.com/chemin/vers/votre_extension-1.1.xpi"
-        }
-      ]
-    }
+  "design-emotion-vocalizer@design-emotion.org": {
+    "updates": [
+      {
+        "version": "1.0.2",
+        "update_link": "https://design-emotion.org/plugins/firefox/122f8ca3e3694150bc06-1.0.2.xpi"
+      },
+      {
+        "version": "1.0.3",
+        "update_link": "https://design-emotion.org/plugins/firefox/122f8ca3e3694150bc06-1.0.3.xpi"
+      }
+    ]
   }
+}
