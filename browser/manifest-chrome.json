@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Design Emotion Vocalizer",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Chrome extension that conveys the design emotions of a web page through speech to enhance the browsing experience for blind users.",
     "permissions": [
       "activeTab",
@@ -9,6 +9,14 @@
       "downloads",
       "storage"
     ],
+    "commands": {
+      "trigger-transcript": {
+        "suggested_key": {
+          "default": "Alt+Shift+Y"
+        },
+        "description": "Design emotion vocalizer"
+      }
+    },
     "host_permissions": [
       "https://*.execute-api.eu-west-3.amazonaws.com/*", 
       "http://localhost:3000/*"
@@ -29,14 +37,5 @@
     "background": {
       "service_worker": "background.js",
       "type": "module"
-    },
-    "commands": {
-      "trigger-transcript": {
-        "suggested_key": {
-          "default": "Ctrl+Shift+Y",
-          "mac": "Ctrl+Shift+Y"
-        },
-        "description": "Design emotion vocalizer"
-      }
     }
   }

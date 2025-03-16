@@ -1,12 +1,13 @@
 {
     "manifest_version": 3,
     "name": "Design Emotion Vocalizer",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Firefox extension that conveys the design emotions of a web page through speech to enhance the browsing experience for blind users.",
     "browser_specific_settings": {
       "gecko": {
         "id": "design-emotion-vocalizer@design-emotion.org",
-        "strict_min_version": "109.0"
+        "strict_min_version": "112.0",
+        "update_url": "https://auxracinesdusouffle.org/design-emotion/update.json"
       }
     },
     "permissions": [
@@ -16,6 +17,14 @@
       "storage",
       "tabs"
     ],
+    "commands": {
+      "trigger-transcript": {
+        "suggested_key": {
+          "default": "Alt+Shift+Y"
+        },
+        "description": "Design emotion vocalizer"
+      }
+    },
     "host_permissions": [
       "https://*.execute-api.eu-west-3.amazonaws.com/*", 
       "http://localhost:3000/*"
@@ -36,14 +45,5 @@
     "background": {
       "scripts": ["background.js"],
       "type": "module"
-    },
-    "commands": {
-      "trigger-transcript": {
-        "suggested_key": {
-          "default": "Ctrl+Shift+Y",
-          "mac": "Ctrl+Shift+Y"
-        },
-        "description": "Design emotion vocalizer"
-      }
     }
 }

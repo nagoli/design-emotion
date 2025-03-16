@@ -81,3 +81,10 @@ sam deploy --template-file /Users/olivier/dev/design-emotion/aws/packaged.yaml -
 ----- chrome plugin 
 
 chrome web store console : https://chrome.google.com/webstore/devconsole/7fc28294-7fa4-4340-acbe-707735d02830?hl=fr
+
+
+
+------ firefox plugin
+
+https://addons.mozilla.org/fr/developers/addons?sort=updated
+

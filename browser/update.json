@@ -1,0 +1,10 @@
+{
+    "votre_extension_id@example.com": {
+      "updates": [
+        {
+          "version": "1.1",
+          "update_link": "https://votre-domaine.com/chemin/vers/votre_extension-1.1.xpi"
+        }
+      ]
+    }
+  }

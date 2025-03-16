@@ -26,11 +26,11 @@ function initLoadingSpinner(tabId) {
   browser.scripting.executeScript({
     target: { tabId },
     func: () => {
-      if (!document.querySelector('#spinner-animation-unique')) {
+      if (!document.querySelector('#spinner-animation-designemotionelements')) {
         const styleAnimation = document.createElement('style');
-        styleAnimation.id = 'spinner-animation-unique';
+        styleAnimation.id = 'spinner-animation-designemotionelements';
         styleAnimation.textContent = `
-          @keyframes spin-unique {
+          @keyframes spin-designemotionelements {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
@@ -38,7 +38,7 @@ function initLoadingSpinner(tabId) {
         document.head.appendChild(styleAnimation);
 
         loadingContainer = document.createElement('div');
-        loadingContainer.className = 'loading-container-unique';
+        loadingContainer.className = 'loading-container-designemotionelements';
         loadingContainer.style.position = "fixed";
         loadingContainer.style.top = "20px";
         loadingContainer.style.right = "20px";
@@ -58,7 +58,7 @@ function initLoadingSpinner(tabId) {
         
         // Créer le spinner (visible mais caché des lecteurs d'écran)
         const spinner = document.createElement('div');
-        spinner.className = 'spinner-unique';
+        spinner.className = 'spinner-designemotionelements';
         spinner.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
         spinner.style.marginRight = "10px";
         spinner.style.width = "16px";
@@ -66,12 +66,12 @@ function initLoadingSpinner(tabId) {
         spinner.style.border = "3px solid rgba(255, 255, 255, 0.3)";
         spinner.style.borderRadius = "50%";
         spinner.style.borderTop = "3px solid #fff";
-        spinner.style.animation = "spin-unique 1s linear infinite";
+        spinner.style.animation = "spin-designemotionelements 1s linear infinite";
 
         
         // Créer le message de chargement (visible mais caché des lecteurs d'écran)
         const loadingMessage = document.createElement('span');
-        loadingMessage.className = 'loading-message-unique';
+        loadingMessage.className = 'loading-message-designemotionelements';
         loadingMessage.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
         loadingMessage.style.fontFamily = "monospace";
         loadingMessage.style.fontSize = "14px";
@@ -88,30 +88,44 @@ function initLoadingSpinner(tabId) {
 }
 
 
-
-function initLiveRegion(tabId) {
+/**
+ * force liveregion creation at each call (to be used when the transcript is ready)
+ * @param {*} tabId 
+ * @param {*} txt 
+ */
+function setLiveRegion(tabId, txt) {
   browser.scripting.executeScript({
     target: { tabId },
-    func: () => {
-      // Créer une région live assertive pour les annonces d'accessibilité
-      if (!document.querySelector('.live-region-unique')) {
-        const liveRegion = document.createElement('div');
-        liveRegion.className = 'live-region-unique';
-        liveRegion.setAttribute('aria-live', 'assertive');
-        liveRegion.setAttribute('aria-atomic', 'true');
-        // Style pour rendre l'élément visuellement caché mais accessible aux lecteurs d'écran
-        liveRegion.style.position = 'absolute';
-        liveRegion.style.width = '1px';
-        liveRegion.style.height = '1px';
-        liveRegion.style.padding = '0';
-        liveRegion.style.margin = '-1px';
-        liveRegion.style.overflow = 'hidden';
-        liveRegion.style.clip = 'rect(0, 0, 0, 0)';
-        liveRegion.style.whiteSpace = 'nowrap';
-        liveRegion.style.border = '0';
-        document.body.appendChild(liveRegion);
+    func: (txt) => {
+      let liveRegion = document.getElementById('live-region-designemotionelements');
+      if (!liveRegion) {
+        // Créer une région live assertive pour les annonces d'accessibilité  
+        liveRegion = document.createElement('div');
+      liveRegion.id = 'live-region-designemotionelements';
+      liveRegion.setAttribute('aria-live', 'assertive');
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.setAttribute('role', 'alert');
+      // Style pour rendre l'élément visuellement caché mais accessible aux lecteurs d'écran
+      liveRegion.style.position = 'absolute';
+      liveRegion.style.width = '1px';
+      liveRegion.style.height = '1px';
+      liveRegion.style.padding = '0';
+      liveRegion.style.margin = '-1px';
+      liveRegion.style.overflow = 'hidden';
+      liveRegion.style.clip = 'rect(0, 0, 0, 0)';
+      liveRegion.style.whiteSpace = 'nowrap';
+      liveRegion.style.border = '0';
+      liveRegion.style.display = 'block';
+      liveRegion.textContent = '...';
+      document.body.appendChild(liveRegion);
+      setTimeout(() => {
+        console.log('Temporize live region update ', txt);
+      }, 100);
       }
-    }
+      liveRegion.textContent = txt;
+      console.log('Live region should vocalize', txt);
+    },
+    args: [txt]
   });
 }
 
@@ -120,11 +134,21 @@ function initShowButton(tabId) {
   browser.scripting.executeScript({
     target: { tabId },
     func: (locStrings) => {
-        // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
+      // Supprimer tout spinner existant pour éviter les doublons
+      const existingSpinner = document.querySelector('.loading-container-designemotionelements');
+      if (existingSpinner) {
+        existingSpinner.style.display = 'none';
+      }  
+      
+      
+      // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
+      
+
+
         const btn = document.createElement('button');
         btn.textContent = locStrings.click_for_description;
         //btn.setAttribute('aria-label', txt); // Cacher aux lecteurs d'écran
-        btn.className = 'design-emotion-btn-unique';
+        btn.className = 'design-emotion-btn-designemotionelements';
         
         // Style pour rendre le bouton visible pour les utilisateurs voyants
         btn.style.position = "fixed";
@@ -155,127 +179,147 @@ function initPopup(tabId,txt) {
   browser.scripting.executeScript({
     target: { tabId },
     func: (locStrings, txt) => {
-        // Créer la structure de la pop-in
-        const overlayHTML = `
-        <div class="overlay-unique">
-          <div class="popup-unique">
-            <div class="popup-header-unique">
-              <h2>${locStrings.popup_header}</h2>
-            </div>
-            <div class="popup-body-unique">
-              <p>${txt}</p>
-            </div>
-            <div class="popup-footer-unique">
-              <button class="popup-close-btn-unique">${locStrings.close_button}</button>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Styles pour la pop-in (en utilisant des classes uniques pour éviter les conflits)
-      const styles = document.createElement('style');
-      styles.textContent = `
-        .overlay-unique {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(255, 255, 255, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 10001;
-          opacity: 0;
-          visibility: hidden;
-          transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
+        // Styles pour la pop-in (en utilisant des classes uniques pour éviter les conflits)
+        const styles = document.createElement('style');
+        styles.textContent = `
+          .overlay-designemotionelements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+          }
+          
+          .overlay-designemotionelements.active {
+            opacity: 1;
+            visibility: visible;
+          }
+          
+          .popup-designemotionelements {
+            background-color: rgba(0, 0, 0, 1);
+            border-radius: 12px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            width: clamp(300px, 80%, 800px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+          }
+          
+          .overlay-designemotionelements.active .popup-designemotionelements {
+            transform: scale(1);
+          }
+          
+          .popup-header-designemotionelements {
+            color: white;
+            padding: 8px 16px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+          
+          .popup-header-designemotionelements h2 {
+            margin: 0;
+            color: white;
+            font-size: 25px;
+            font-weight: bold;
+            font-family: monospace;
+          }
+          
+          .popup-body-designemotionelements {
+            border-radius: 8px;
+            padding: 16px;
+            color: black;
+            background-color: white;
+            font-family: monospace;
+            font-size: 16px;
+            line-height: 1.5;
+            overflow-y: auto;
+            margin : 0 12px;
+          }
+          
+          .popup-footer-designemotionelements {
+            color: white;
+            padding: 8px 16px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+          
+          .popup-close-btn-designemotionelements {
+            background-color: transparent;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          
+          .popup-close-btn-designemotionelements:hover {
+            background-color: #0056b3;
+          }
+          
+          .design-emotion-btn-designemotionelements:hover {
+            background-color: #0056b3;
+          }
+        `;
+        document.head.appendChild(styles);
         
-        .overlay-unique.active {
-          opacity: 1;
-          visibility: visible;
-        }
+        // Créer la structure de la pop-in avec des méthodes DOM sécurisées
+        // au lieu d'utiliser innerHTML (pour éviter les risques XSS)
         
-        .popup-unique {
-          background-color: rgba(0, 0, 0, 1);
-          border-radius: 12px;
-          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-          width: clamp(300px, 80%, 800px);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          transform: scale(0.8);
-          transition: transform 0.3s ease;
-        }
+        // Créer l'overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-designemotionelements';
         
-        .overlay-unique.active .popup-unique {
-          transform: scale(1);
-        }
+        // Créer le popup
+        const popup = document.createElement('div');
+        popup.className = 'popup-designemotionelements';
         
-        .popup-header-unique {
-          color: white;
-          padding: 8px 16px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-        }
+        // Créer le header
+        const popupHeader = document.createElement('div');
+        popupHeader.className = 'popup-header-designemotionelements';
+        const headerTitle = document.createElement('h2');
+        headerTitle.textContent = locStrings.popup_header;
+        popupHeader.appendChild(headerTitle);
         
-        .popup-header-unique h2 {
-          margin: 0;
-          color: white;
-          font-size: 25px;
-          font-weight: bold;
-          font-family: monospace;
-        }
+        // Créer le body
+        const popupBody = document.createElement('div');
+        popupBody.className = 'popup-body-designemotionelements';
+        const bodyText = document.createElement('p');
+        bodyText.textContent = txt;
+        popupBody.appendChild(bodyText);
         
-        .popup-body-unique {
-          border-radius: 8px;
-          padding: 16px;
-          color: black;
-          background-color: white;
-          font-family: monospace;
-          font-size: 16px;
-          line-height: 1.5;
-          overflow-y: auto;
-          margin : 0 12px;
-        }
+        // Créer le footer
+        const popupFooter = document.createElement('div');
+        popupFooter.className = 'popup-footer-designemotionelements';
+        const closeButton = document.createElement('button');
+        closeButton.className = 'popup-close-btn-designemotionelements';
+        closeButton.textContent = locStrings.close_button;
+        popupFooter.appendChild(closeButton);
         
-        .popup-footer-unique {
-          color: white;
-          padding: 8px 16px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-        }
+        // Assembler les éléments
+        popup.appendChild(popupHeader);
+        popup.appendChild(popupBody);
+        popup.appendChild(popupFooter);
+        overlay.appendChild(popup);
         
-        .popup-close-btn-unique {
-          background-color: transparent;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          padding: 6px 12px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        
-        .popup-close-btn-unique:hover {
-          background-color: #0056b3;
-        }
-        
-        .design-emotion-btn-unique:hover {
-          background-color: #0056b3;
-        }
-      `;
-      document.head.appendChild(styles);
-      
-      // Créer la div pour l'overlay
-      const overlayContainer = document.createElement('div');
-      overlayContainer.innerHTML = overlayHTML;
-      document.body.appendChild(overlayContainer.firstElementChild);
+        // Ajouter au DOM
+        document.body.appendChild(overlay);
     },
     args: [locStrings, txt]
   });
@@ -296,9 +340,9 @@ function addButtonAndPopupInteractions(tabId, text, speechLang){
     
       
       // Récupérer les éléments de la pop-in
-      const overlay = document.querySelector('.overlay-unique');
-      const closeBtn = document.querySelector('.popup-close-btn-unique');
-      const btn = document.querySelector('.design-emotion-btn-unique');
+      const overlay = document.querySelector('.overlay-designemotionelements');
+      const closeBtn = document.querySelector('.popup-close-btn-designemotionelements');
+      const btn = document.querySelector('.design-emotion-btn-designemotionelements');
       
       // Fonction pour ouvrir la pop-in
       const openPopup = () => {
@@ -405,15 +449,13 @@ function updateLoadingMessage(tabId, message) {
   browser.scripting.executeScript({
     target: { tabId },
     func: (msg) => {
-      const loadingContainer = document.querySelector('.loading-container-unique');
+      const loadingContainer = document.querySelector('.loading-container-designemotionelements');
       if (loadingContainer) loadingContainer.style.display = 'flex';
 
-      const loadingMessage = document.querySelector('.loading-message-unique');
-      const liveRegion = document.querySelector('.live-region-unique');
+      const loadingMessage = document.querySelector('.loading-message-designemotionelements');
       
       if (loadingMessage) loadingMessage.textContent = msg;
-      if (liveRegion) liveRegion.textContent = msg;
-
+      
       // effacer le message après 15s
       setTimeout(() => {
         if (loadingMessage) loadingMessage.style.display = 'none';
@@ -431,14 +473,11 @@ function hideSpinnerShowButton(tabId) {
     target: { tabId },
     func: (locStrings) => {
 
-      const loadingContainer = document.querySelector('.loading-container-unique');
+      const loadingContainer = document.querySelector('.loading-container-designemotionelements');
       if (loadingContainer) loadingContainer.style.display = 'none';
       
-      const btn = document.querySelector('.design-emotion-btn-unique');
+      const btn = document.querySelector('.design-emotion-btn-designemotionelements');
       if (btn) btn.style.display = 'block';
-      
-      const liveRegion = document.querySelector('.live-region-unique');
-      if (liveRegion) liveRegion.textContent = locStrings.transcript_ready_aria_message;
     },
     args: [locStrings]
   });
@@ -478,11 +517,11 @@ function triggerTranscript() {
       
       // Afficher le spinner dès le début du processus
       initLoadingSpinner(activeTab.id);
-      initLiveRegion(activeTab.id);
-
+      
       // Injection de script dans l'onglet actif pour récupérer d'autres infos de la page
       // Récupérer les infos de la page et la langue du navigateur
       updateLoadingMessage(activeTab.id, locStrings.analyzing_message);
+      setLiveRegion(activeTab.id, locStrings.analyzing_message);
       
       browser.scripting.executeScript({
         target: { tabId: activeTab.id },
@@ -524,6 +563,7 @@ function triggerTranscript() {
           if (data.known === 1 && data.transcript) {
             // Si le transcript est déjà connu, mettre à jour le message et le vocaliser directement
             updateLoadingMessage(activeTab.id, locStrings.transcript_ready_message);
+            setLiveRegion(activeTab.id, locStrings.transcript_ready_message);
             // Attendre un court instant pour montrer le message de génération
             setTimeout(() => {
               speakInTab(activeTab.id, data.transcript, browserLang, true);
@@ -531,17 +571,20 @@ function triggerTranscript() {
           } else if (data.known === 0 && data.id) {
             // Sinon, mettre à jour le message puis capturer un screenshot et l'envoyer au serveur
             updateLoadingMessage(activeTab.id,locStrings.analyzing_message2);
+            setLiveRegion(activeTab.id, locStrings.analyzing_message2);
             processScreenshotWithModifiedOpacity(activeTab, data.id, serverUrl);
 
           }
           else {
             // Si le transcript n'est pas connu, afficher un message d'erreur
             updateLoadingMessage(activeTab.id, locStrings.error_message);
+            setLiveRegion(activeTab.id, locStrings.error_message);
           } 
         })
         .catch(err => {
           console.error("❗ Erreur lors du POST transcript:", err);
           updateLoadingMessage(activeTab.id, locStrings.error_message);
+          setLiveRegion(activeTab.id, locStrings.error_message);
           if (err instanceof Error) {
             console.error('Error details:', {
               message: err.message,
@@ -698,6 +741,7 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
       .catch(err => {
         console.error("❗ Erreur lors du POST image-transcript:", err);
         updateLoadingMessage(activeTab.id, locStrings.error_message);
+        setLiveRegion(activeTab.id, locStrings.error_message);
         if (err instanceof Error) {
           console.error('Error details:', {
             message: err.message,
@@ -716,31 +760,10 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
 function speakInTab(tabId, text, lang, skipSpinner = false) {
   console.log("SpeakInTab called");
  
-  // D'abord, masquer le spinner existant
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: (txt) => {
-      // Supprimer tout spinner existant pour éviter les doublons
-      const existingSpinner = document.querySelector('.loading-container-unique');
-      if (existingSpinner) {
-        existingSpinner.style.display = 'none';
-      }
-      console.log("SpeakInTab internal func called");
-      
-      // Récupérer la région live pour vocaliser le transcript
-      const liveRegion = document.querySelector('.live-region-unique');
-      
-      // Vocaliser immédiatement le transcript pour les lecteurs d'écran
-      if (liveRegion) {
-        liveRegion.textContent = txt;
-      }
-    },
-    args: [text]
-  });
   initShowButton(tabId);
   initPopup(tabId, text);
   addButtonAndPopupInteractions(tabId, text, lang);
-
+  setLiveRegion(tabId, locStrings.transcript_intro_message +  text);
 }
 
 /**
