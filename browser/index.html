@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version du plugin Design Emotion pour Firefox</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .version {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Liens disponibles</h1>
+    <div id="links-container">Chargement des liens...</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('update.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur lors du chargement du fichier JSON');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const container = document.getElementById('links-container');
+                    container.innerHTML = '';
+                    
+                    // Pour chaque extension dans le JSON
+                    for (const extension in data) {
+                        const updates = data[extension].updates;
+                        if (updates && updates.length) {
+                            const extensionTitle = document.createElement('h2');
+                            extensionTitle.textContent = extension;
+                            container.appendChild(extensionTitle);
+                            
+                            const linksList = document.createElement('ul');
+                            
+                            // Pour chaque mise à jour
+                            updates.forEach(update => {
+                                const listItem = document.createElement('li');
+                                
+                                const versionSpan = document.createElement('span');
+                                versionSpan.className = 'version';
+                                versionSpan.textContent = 'Version: ' + update.version;
+                                listItem.appendChild(versionSpan);
+                                
+                                const link = document.createElement('a');
+                                link.href = update.update_link;
+                                link.textContent = update.update_link;
+                                link.target = '_blank';
+                                listItem.appendChild(link);
+                                
+                                linksList.appendChild(listItem);
+                            });
+                            
+                            container.appendChild(linksList);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    document.getElementById('links-container').innerHTML = 
+                        '<p style="color: red;">Erreur lors du chargement des données: ' + error.message + '</p>';
+                });
+        });
+    </script>
+</body>
+</html>
