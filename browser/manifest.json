@@ -24,6 +24,14 @@
       "128": "icon128.png"
     }
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "css": ["content-script.css"],
+      "run_at": "document_start"
+    }
+  ],
   "icons": {
     "128": "icon128.png",
     "16": "icon16.png",
