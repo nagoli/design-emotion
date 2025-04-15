@@ -1,5 +1,3 @@
-import { getLocalizedStrings } from "./localization.js";
-const locStrings = getLocalizedStrings();
 console.log('popup.js loaded');
 
 const browser = chrome || window.browser; // Supporte les navigateurs non-chrome
@@ -9,10 +7,10 @@ window.initializeLocalization = function() {
   console.log('Localisation initialisée:');
 
   // Mise à jour des textes dans le popup
-  document.querySelector('.header span').textContent = locStrings.popup_title;
-  document.getElementById('vocaliseBtn').textContent = locStrings.vocalize_button;
-  document.getElementById('settingsBtn').textContent = locStrings.change_shortcut_button;
-  document.querySelector('.footer').textContent = locStrings.footer_copyright;
+  document.querySelector('.header span').textContent = browser.i18n.getMessage('popup_title');
+  document.getElementById('vocaliseBtn').textContent = browser.i18n.getMessage('vocalize_button');
+  document.getElementById('settingsBtn').textContent = browser.i18n.getMessage('change_shortcut_button');
+  document.querySelector('.footer').textContent = browser.i18n.getMessage('footer_copyright');
   
   // Ajout des écouteurs d'événements
   document.getElementById("vocaliseBtn").addEventListener("click", () => {

@@ -1,0 +1,58 @@
+{
+  "popup_title": {
+    "message": "Design Emotion Vocalizer",
+    "description": "Titre de la popup"
+  },
+  "vocalize_button": {
+    "message": "Vocaliser (Alt+Shift+Y)",
+    "description": "Bouton pour déclencher la vocalisation"
+  },
+  "change_shortcut_button": {
+    "message": "Modifier le raccourci",
+    "description": "Bouton pour modifier le raccourci clavier"
+  },
+  "footer_copyright": {
+    "message": "© 2025 Design Emotion",
+    "description": "Texte de copyright en pied de page"
+  },
+  "analyzing_message": {
+    "message": "Analyse des émotions provoquées par le design...",
+    "description": "Message affiché pendant l'analyse"
+  },
+  "analyzing_message2": {
+    "message": "La transcription des émotions provoquées par le design est en cours...",
+    "description": "Second message affiché pendant l'analyse"
+  },
+  "transcript_ready_message": {
+    "message": "Transcription des émotions du design prête",
+    "description": "Message affiché quand la transcription est prête"
+  },
+  "click_for_description": {
+    "message": "Cliquez pour écouter la transcription des intentions du design de ce site",
+    "description": "Message sur le bouton pour voir la transcription"
+  },
+  "popup_header": {
+    "message": "Design Emotion Vocalizer",
+    "description": "En-tête de la popup de transcription"
+  },
+  "close_button": {
+    "message": "Fermer",
+    "description": "Bouton pour fermer la popup de transcription"
+  },
+  "loading_aria_message": {
+    "message": "Analyse des émotions provoquées par le design. Veuillez patienter.",
+    "description": "Message d'accessibilité pendant le chargement"
+  },
+  "transcript_ready_aria_message": {
+    "message": "Transcription des émotions provoquées par le design prête.",
+    "description": "Message d'accessibilité quand la transcription est prête"
+  },
+  "error_message": {
+    "message": "Une erreur est survenue lors du traitement du design. Veuillez réessayer plus tard.",
+    "description": "Message d'erreur affiché en cas d'échec"
+  },
+  "transcript_intro_message": {
+    "message": "Voici un essai de transcription des émotions du design graphique de cette page : ",
+    "description": "Introduction à la transcription"
+  }
+}

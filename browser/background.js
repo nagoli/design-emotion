@@ -4,13 +4,10 @@ import { DEFAULT_SERVER_URL } from "./config.js";
 // Configuration du debugging
 const LOG_SCREENSHOTS = false;  // Mettre à true pour sauvegarder les captures d'écran en PNG
 
-// Importer la fonction de localisation
-import { getLocalizedStrings } from "./localization.js";
-const locStrings = getLocalizedStrings();
-
 // Add this at the top of your background.js and other scripts
 const browser = chrome || window.browser;
 
+// Obtention de la langue du navigateur
 const browserLang = browser.i18n.getUILanguage();
 
 
@@ -133,7 +130,8 @@ function setLiveRegion(tabId, txt) {
 function initShowButton(tabId) {
   browser.scripting.executeScript({
     target: { tabId },
-    func: (locStrings) => {
+    func: () => {
+      const browser = chrome || window.browser;
       // Supprimer tout spinner existant pour éviter les doublons
       const existingSpinner = document.querySelector('.loading-container-designemotionelements');
       if (existingSpinner) {
@@ -146,7 +144,7 @@ function initShowButton(tabId) {
 
 
         const btn = document.createElement('button');
-        btn.textContent = locStrings.click_for_description;
+        btn.textContent = browser.i18n.getMessage('click_for_description');
         //btn.setAttribute('aria-label', txt); // Cacher aux lecteurs d'écran
         btn.className = 'design-emotion-btn-designemotionelements';
         
@@ -169,7 +167,7 @@ function initShowButton(tabId) {
         btn.style.fontWeight = "bold";
         document.body.appendChild(btn);      
     },
-    args: [locStrings]
+    args: []
   });
 }
 
@@ -178,7 +176,8 @@ function initPopup(tabId,txt) {
 
   browser.scripting.executeScript({
     target: { tabId },
-    func: (locStrings, txt) => {
+    func: (txt) => {
+      const browser = chrome || window.browser;
         // Styles pour la pop-in (en utilisant des classes uniques pour éviter les conflits)
         const styles = document.createElement('style');
         styles.textContent = `
@@ -294,7 +293,7 @@ function initPopup(tabId,txt) {
         const popupHeader = document.createElement('div');
         popupHeader.className = 'popup-header-designemotionelements';
         const headerTitle = document.createElement('h2');
-        headerTitle.textContent = locStrings.popup_header;
+        headerTitle.textContent = browser.i18n.getMessage('popup_header');
         popupHeader.appendChild(headerTitle);
         
         // Créer le body
@@ -309,7 +308,7 @@ function initPopup(tabId,txt) {
         popupFooter.className = 'popup-footer-designemotionelements';
         const closeButton = document.createElement('button');
         closeButton.className = 'popup-close-btn-designemotionelements';
-        closeButton.textContent = locStrings.close_button;
+        closeButton.textContent = browser.i18n.getMessage('close_button');
         popupFooter.appendChild(closeButton);
         
         // Assembler les éléments
@@ -321,14 +320,15 @@ function initPopup(tabId,txt) {
         // Ajouter au DOM
         document.body.appendChild(overlay);
     },
-    args: [locStrings, txt]
+    args: [txt]
   });
 }
 
 function addButtonAndPopupInteractions(tabId, text, speechLang){
   browser.scripting.executeScript({
     target: { tabId },
-    func: (txt, speechLang, locStrings) => {
+    func: (txt, speechLang) => {
+      const browser = chrome || window.browser;
       
       // Stocker l'élément actuellement focalisé pour y revenir plus tard
       const previouslyFocusedElement = document.activeElement;
@@ -437,7 +437,7 @@ function addButtonAndPopupInteractions(tabId, text, speechLang){
       }
     });
     },
-    args: [text, speechLang, locStrings]
+    args: [text, speechLang]
   });
 }
 
@@ -471,7 +471,8 @@ function updateLoadingMessage(tabId, message) {
 function hideSpinnerShowButton(tabId) {
   browser.scripting.executeScript({
     target: { tabId },
-    func: (locStrings) => {
+    func: () => {
+      const browser = chrome || window.browser;
 
       const loadingContainer = document.querySelector('.loading-container-designemotionelements');
       if (loadingContainer) loadingContainer.style.display = 'none';
@@ -479,7 +480,7 @@ function hideSpinnerShowButton(tabId) {
       const btn = document.querySelector('.design-emotion-btn-designemotionelements');
       if (btn) btn.style.display = 'block';
     },
-    args: [locStrings]
+    args: []
   });
 }
 
@@ -520,8 +521,8 @@ function triggerTranscript() {
       
       // Injection de script dans l'onglet actif pour récupérer d'autres infos de la page
       // Récupérer les infos de la page et la langue du navigateur
-      updateLoadingMessage(activeTab.id, locStrings.analyzing_message);
-      setLiveRegion(activeTab.id, locStrings.analyzing_message);
+      updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message'));
+      setLiveRegion(activeTab.id, browser.i18n.getMessage('analyzing_message'));
       
       browser.scripting.executeScript({
         target: { tabId: activeTab.id },
@@ -562,23 +563,23 @@ function triggerTranscript() {
           console.log('📦 /transcript Response Data:', data);
           if (data.known === 1 && data.transcript) {
             // Si le transcript est déjà connu, mettre à jour le message et le vocaliser directement
-            updateLoadingMessage(activeTab.id, locStrings.transcript_ready_message);
-            setLiveRegion(activeTab.id, locStrings.transcript_ready_message);
+            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('transcript_ready_message'));
+            setLiveRegion(activeTab.id, browser.i18n.getMessage('transcript_ready_message'));
             // Attendre un court instant pour montrer le message de génération
             setTimeout(() => {
               speakInTab(activeTab.id, data.transcript, browserLang, true);
             }, 3000);
           } else if (data.known === 0 && data.id) {
             // Sinon, mettre à jour le message puis capturer un screenshot et l'envoyer au serveur
-            updateLoadingMessage(activeTab.id,locStrings.analyzing_message2);
-            setLiveRegion(activeTab.id, locStrings.analyzing_message2);
+            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message2'));
+            setLiveRegion(activeTab.id, browser.i18n.getMessage('analyzing_message2'));
             processScreenshotWithModifiedOpacity(activeTab, data.id, serverUrl);
 
           }
           else {
             // Si le transcript n'est pas connu, afficher un message d'erreur
-            updateLoadingMessage(activeTab.id, locStrings.error_message);
-            setLiveRegion(activeTab.id, locStrings.error_message);
+            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('error_message'));
+            setLiveRegion(activeTab.id, browser.i18n.getMessage('error_message'));
           } 
         })
         .catch(err => {
@@ -763,7 +764,7 @@ function speakInTab(tabId, text, lang, skipSpinner = false) {
   initShowButton(tabId);
   initPopup(tabId, text);
   addButtonAndPopupInteractions(tabId, text, lang);
-  setLiveRegion(tabId, locStrings.transcript_intro_message +  text);
+  setLiveRegion(tabId, browser.i18n.getMessage('transcript_intro_message') +  text);
 }
 
 /**

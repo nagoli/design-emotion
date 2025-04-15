@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Design Emotion Vocalizer",
-  "version": "1.0.3",
+  "name": "__MSG_popup_title__",
+  "version": "1.0.4",
   "description": "Browser extension that conveys the design emotions of a web page through speech to enhance the browsing experience for blind users.",
+  "default_locale": "en",
   "commands": {
     "trigger-transcript": {
       "suggested_key": {

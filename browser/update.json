@@ -3,11 +3,15 @@
     "updates": [
       {
         "version": "1.0.2",
-        "update_link": "https://design-emotion.org/plugins/firefox/122f8ca3e3694150bc06-1.0.2.xpi"
+        "update_link": "https://design-emotion.org/plugins/firefox/d-e_v1.0.2.xpi"
       },
       {
         "version": "1.0.3",
-        "update_link": "https://design-emotion.org/plugins/firefox/122f8ca3e3694150bc06-1.0.3.xpi"
+        "update_link": "https://design-emotion.org/plugins/firefox/d-e_v1.0.3.xpi"
+      },
+      {
+        "version": "1.0.4",
+        "update_link": "https://design-emotion.org/plugins/firefox/d-e_v1.0.4.xpi"
       }
     ]
   }

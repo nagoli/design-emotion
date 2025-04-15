@@ -1,0 +1,58 @@
+{
+  "popup_title": {
+    "message": "Design Emotion Vocalizer",
+    "description": "Title of the popup"
+  },
+  "vocalize_button": {
+    "message": "Vocalize (Alt+Shift+Y)",
+    "description": "Button to trigger vocalization"
+  },
+  "change_shortcut_button": {
+    "message": "Change Shortcut",
+    "description": "Button to change keyboard shortcut"
+  },
+  "footer_copyright": {
+    "message": "© 2025 Design Emotion",
+    "description": "Footer copyright text"
+  },
+  "analyzing_message": {
+    "message": "Analyzing the emotions induced by the design...",
+    "description": "Message shown during analysis"
+  },
+  "analyzing_message2": {
+    "message": "The transcript of the emotions induced by the design is being created...",
+    "description": "Second message shown during analysis"
+  },
+  "transcript_ready_message": {
+    "message": "Design emotion transcript ready",
+    "description": "Message shown when transcript is ready"
+  },
+  "click_for_description": {
+    "message": "Click for listening to the transcript of the design intents of this web site",
+    "description": "Message on button to view transcript"
+  },
+  "popup_header": {
+    "message": "Design Emotion Vocalizer",
+    "description": "Header of the transcript popup"
+  },
+  "close_button": {
+    "message": "Close",
+    "description": "Button to close the transcript popup"
+  },
+  "loading_aria_message": {
+    "message": "Analyzing design emotion. Please wait.",
+    "description": "Accessibility message during loading"
+  },
+  "transcript_ready_aria_message": {
+    "message": "Design emotion transcript ready. Click the button to view.",
+    "description": "Accessibility message when transcript is ready"
+  },
+  "error_message": {
+    "message": "An error occurred while processing the design. Please try again later.",
+    "description": "Error message shown on failure"
+  },
+  "transcript_intro_message": {
+    "message": "Here is an attempt to transcribe the emotions conveyed by the graphic design of this page: ",
+    "description": "Introduction to the transcript"
+  }
+}
