@@ -33,6 +33,7 @@ cp -r "${SOURCE_DIR}"/*.js "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.html "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.svg "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.png "${CHROME_BUILD_DIR}/"
+cp -r "${SOURCE_DIR}"/*.css "${CHROME_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}/_locales" "${CHROME_BUILD_DIR}/"
 
 # Check if jq is installed
@@ -61,6 +62,7 @@ cp -r "${SOURCE_DIR}"/*.js "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.html "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.svg "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}"/*.png "${FIREFOX_BUILD_DIR}/"
+cp -r "${SOURCE_DIR}"/*.css "${FIREFOX_BUILD_DIR}/"
 cp -r "${SOURCE_DIR}/_locales" "${FIREFOX_BUILD_DIR}/"
 
 # Merge common manifest with Firefox-specific parts

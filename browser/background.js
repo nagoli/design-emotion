@@ -10,486 +10,158 @@ const browser = chrome || window.browser;
 // Obtention de la langue du navigateur
 const browserLang = browser.i18n.getUILanguage();
 
+/**
+ * 
+ * 
+ * GESTION CHARGEMENT CONTENT SCRIPT
+ * 
+ */
+
+
+// Variable pour suivre les onglets où le content script a été injecté
+const injectedTabs = new Set();
+
+/**
+ * Vérifie si le content script est chargé dans l'onglet spécifié et l'injecte si nécessaire
+ * @param {number} tabId - ID de l'onglet à vérifier
+ * @returns {Promise<boolean>} - Promise résolue avec true si le content script est chargé
+ */
+async function ensureContentScriptLoaded(tabId) {
+  // Si nous savons déjà que le script a été injecté, pas besoin de vérifier
+  if (injectedTabs.has(tabId)) {
+    return true;
+  }
+
+  try {
+    // Essayer d'envoyer un message ping pour vérifier si le content script est chargé car il n est pas chargé directement si le plugin n est pas actif au moment du chargement de la page 
+    await browser.tabs.sendMessage(tabId, { action: 'ping' });
+    injectedTabs.add(tabId);
+    return true;
+  } catch (error) {
+    // Le content script n'est pas chargé, l'injecter manuellement
+    try {
+      console.log('Injecting content script into tab:', tabId);
+      await browser.scripting.executeScript({
+        target: { tabId },
+        files: ['content-script.js']
+      });
+      
+      // Injecter également le CSS
+      await browser.scripting.insertCSS({
+        target: { tabId },
+        files: ['content-script.css']
+      });
+      
+      // Attendre un court instant pour que le script se charge complètement
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      injectedTabs.add(tabId);
+      return true;
+    } catch (injectError) {
+      console.error('Erreur lors de l\'injection du content script:', injectError);
+      return false;
+    }
+  }
+}
+
+// Nettoyer la liste des onglets injectés lorsqu'un onglet est fermé
+browser.tabs.onRemoved.addListener((tabId) => {
+  injectedTabs.delete(tabId);
+});
+
+
+
+/**
+ * 
+ * 
+ * MOTEUR DE TRANSCRIPTION
+ * 
+ * */
 
 
 console.log('🌐 Browser language:', browserLang);
 
-/**
- * Affiche un spinner de chargement et met à jour les messages pour l'accessibilité
- * @returns {Object} - Un objet contenant les références aux éléments créés
- */
-
-function initLoadingSpinner(tabId) {
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      if (!document.querySelector('#spinner-animation-designemotionelements')) {
-        const styleAnimation = document.createElement('style');
-        styleAnimation.id = 'spinner-animation-designemotionelements';
-        styleAnimation.textContent = `
-          @keyframes spin-designemotionelements {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `;
-        document.head.appendChild(styleAnimation);
-
-        loadingContainer = document.createElement('div');
-        loadingContainer.className = 'loading-container-designemotionelements';
-        loadingContainer.style.position = "fixed";
-        loadingContainer.style.top = "20px";
-        loadingContainer.style.right = "20px";
-        loadingContainer.style.padding = "10px 20px";
-        loadingContainer.style.zIndex = "10000";
-        loadingContainer.style.backgroundColor = "#007bff";
-        loadingContainer.style.color = "#fff";
-        loadingContainer.style.border = "none";
-        loadingContainer.style.borderRadius = "5px";
-        loadingContainer.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-        loadingContainer.style.transition = "opacity 0.3s ease";
-        loadingContainer.style.display = "flex";
-        loadingContainer.style.alignItems = "center";
-        loadingContainer.style.justifyContent = "center";
-        loadingContainer.display = "none"; // on ne les montre pas avant qu ils soient utilisés
-
-        
-        // Créer le spinner (visible mais caché des lecteurs d'écran)
-        const spinner = document.createElement('div');
-        spinner.className = 'spinner-designemotionelements';
-        spinner.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
-        spinner.style.marginRight = "10px";
-        spinner.style.width = "16px";
-        spinner.style.height = "16px";
-        spinner.style.border = "3px solid rgba(255, 255, 255, 0.3)";
-        spinner.style.borderRadius = "50%";
-        spinner.style.borderTop = "3px solid #fff";
-        spinner.style.animation = "spin-designemotionelements 1s linear infinite";
-
-        
-        // Créer le message de chargement (visible mais caché des lecteurs d'écran)
-        const loadingMessage = document.createElement('span');
-        loadingMessage.className = 'loading-message-designemotionelements';
-        loadingMessage.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
-        loadingMessage.style.fontFamily = "monospace";
-        loadingMessage.style.fontSize = "14px";
-        loadingMessage.style.fontWeight = "bold";
-        
-        // Assembler le conteneur de chargement
-        loadingContainer.setAttribute('aria-hidden', 'true'); // Cacher aux lecteurs d'écran
-        loadingContainer.appendChild(spinner);
-        loadingContainer.appendChild(loadingMessage);
-        document.body.appendChild(loadingContainer);
-      } 
-    }
-  });
-}
 
 
 /**
- * force liveregion creation at each call (to be used when the transcript is ready)
- * @param {*} tabId 
- * @param {*} txt 
+ * Initialise l'interface utilisateur dans l'onglet spécifié
+ * @param {number} tabId - ID de l'onglet où initialiser l'interface utilisateur
  */
-function setLiveRegion(tabId, txt) {
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: (txt) => {
-      let liveRegion = document.getElementById('live-region-designemotionelements');
-      if (!liveRegion) {
-        // Créer une région live assertive pour les annonces d'accessibilité  
-        liveRegion = document.createElement('div');
-      liveRegion.id = 'live-region-designemotionelements';
-      liveRegion.setAttribute('aria-live', 'assertive');
-      liveRegion.setAttribute('aria-atomic', 'true');
-      liveRegion.setAttribute('role', 'alert');
-      // Style pour rendre l'élément visuellement caché mais accessible aux lecteurs d'écran
-      liveRegion.style.position = 'absolute';
-      liveRegion.style.width = '1px';
-      liveRegion.style.height = '1px';
-      liveRegion.style.padding = '0';
-      liveRegion.style.margin = '-1px';
-      liveRegion.style.overflow = 'hidden';
-      liveRegion.style.clip = 'rect(0, 0, 0, 0)';
-      liveRegion.style.whiteSpace = 'nowrap';
-      liveRegion.style.border = '0';
-      liveRegion.style.display = 'block';
-      liveRegion.textContent = '...';
-      document.body.appendChild(liveRegion);
-      setTimeout(() => {
-        console.log('Temporize live region update ', txt);
-      }, 100);
-      }
-      liveRegion.textContent = txt;
-      console.log('Live region should vocalize', txt);
-    },
-    args: [txt]
-  });
-}
-
-
-function initShowButton(tabId) {
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      const browser = chrome || window.browser;
-      // Supprimer tout spinner existant pour éviter les doublons
-      const existingSpinner = document.querySelector('.loading-container-designemotionelements');
-      if (existingSpinner) {
-        existingSpinner.style.display = 'none';
-      }  
-      
-      
-      // Créer le bouton pour afficher le transcript (visible uniquement pour les utilisateurs voyants)
-      
-
-
-        const btn = document.createElement('button');
-        btn.textContent = browser.i18n.getMessage('click_for_description');
-        //btn.setAttribute('aria-label', txt); // Cacher aux lecteurs d'écran
-        btn.className = 'design-emotion-btn-designemotionelements';
-        
-        // Style pour rendre le bouton visible pour les utilisateurs voyants
-        btn.style.position = "fixed";
-        btn.style.top = "20px";
-        btn.style.right = "20px";
-        btn.style.padding = "10px 20px";
-        btn.style.zIndex = "10000";
-        btn.style.backgroundColor = "#007bff";
-        btn.style.color = "#fff";
-        btn.style.border = "none";
-        btn.style.borderRadius = "5px";
-        btn.style.cursor = "pointer";
-        btn.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-        btn.style.transition = "opacity 0.3s ease";
-        btn.style.display = "block"; // Le bouton est visible par défaut dans cette fonction
-        btn.style.fontFamily = "monospace";
-        btn.style.fontSize = "14px";
-        btn.style.fontWeight = "bold";
-        document.body.appendChild(btn);      
-    },
-    args: []
-  });
-}
-
-
-function initPopup(tabId,txt) {
-
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: (txt) => {
-      const browser = chrome || window.browser;
-        // Styles pour la pop-in (en utilisant des classes uniques pour éviter les conflits)
-        const styles = document.createElement('style');
-        styles.textContent = `
-          .overlay-designemotionelements {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10001;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-          }
-          
-          .overlay-designemotionelements.active {
-            opacity: 1;
-            visibility: visible;
-          }
-          
-          .popup-designemotionelements {
-            background-color: rgba(0, 0, 0, 1);
-            border-radius: 12px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-            width: clamp(300px, 80%, 800px);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transform: scale(0.8);
-            transition: transform 0.3s ease;
-          }
-          
-          .overlay-designemotionelements.active .popup-designemotionelements {
-            transform: scale(1);
-          }
-          
-          .popup-header-designemotionelements {
-            color: white;
-            padding: 8px 16px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-          }
-          
-          .popup-header-designemotionelements h2 {
-            margin: 0;
-            color: white;
-            font-size: 25px;
-            font-weight: bold;
-            font-family: monospace;
-          }
-          
-          .popup-body-designemotionelements {
-            border-radius: 8px;
-            padding: 16px;
-            color: black;
-            background-color: white;
-            font-family: monospace;
-            font-size: 16px;
-            line-height: 1.5;
-            overflow-y: auto;
-            margin : 0 12px;
-          }
-          
-          .popup-footer-designemotionelements {
-            color: white;
-            padding: 8px 16px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-          }
-          
-          .popup-close-btn-designemotionelements {
-            background-color: transparent;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 14px;
-          }
-          
-          .popup-close-btn-designemotionelements:hover {
-            background-color: #0056b3;
-          }
-          
-          .design-emotion-btn-designemotionelements:hover {
-            background-color: #0056b3;
-          }
-        `;
-        document.head.appendChild(styles);
-        
-        // Créer la structure de la pop-in avec des méthodes DOM sécurisées
-        // au lieu d'utiliser innerHTML (pour éviter les risques XSS)
-        
-        // Créer l'overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'overlay-designemotionelements';
-        
-        // Créer le popup
-        const popup = document.createElement('div');
-        popup.className = 'popup-designemotionelements';
-        
-        // Créer le header
-        const popupHeader = document.createElement('div');
-        popupHeader.className = 'popup-header-designemotionelements';
-        const headerTitle = document.createElement('h2');
-        headerTitle.textContent = browser.i18n.getMessage('popup_header');
-        popupHeader.appendChild(headerTitle);
-        
-        // Créer le body
-        const popupBody = document.createElement('div');
-        popupBody.className = 'popup-body-designemotionelements';
-        const bodyText = document.createElement('p');
-        bodyText.textContent = txt;
-        popupBody.appendChild(bodyText);
-        
-        // Créer le footer
-        const popupFooter = document.createElement('div');
-        popupFooter.className = 'popup-footer-designemotionelements';
-        const closeButton = document.createElement('button');
-        closeButton.className = 'popup-close-btn-designemotionelements';
-        closeButton.textContent = browser.i18n.getMessage('close_button');
-        popupFooter.appendChild(closeButton);
-        
-        // Assembler les éléments
-        popup.appendChild(popupHeader);
-        popup.appendChild(popupBody);
-        popup.appendChild(popupFooter);
-        overlay.appendChild(popup);
-        
-        // Ajouter au DOM
-        document.body.appendChild(overlay);
-    },
-    args: [txt]
-  });
-}
-
-function addButtonAndPopupInteractions(tabId, text, speechLang){
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: (txt, speechLang) => {
-      const browser = chrome || window.browser;
-      
-      // Stocker l'élément actuellement focalisé pour y revenir plus tard
-      const previouslyFocusedElement = document.activeElement;
-      
-      
-      // Focus automatique sur le bouton quand il apparaît (pour les utilisateurs voyants)
-      //FOCUS : btn.focus();
-      
-    
-      
-      // Récupérer les éléments de la pop-in
-      const overlay = document.querySelector('.overlay-designemotionelements');
-      const closeBtn = document.querySelector('.popup-close-btn-designemotionelements');
-      const btn = document.querySelector('.design-emotion-btn-designemotionelements');
-      
-      // Fonction pour ouvrir la pop-in
-      const openPopup = () => {
-        overlay.classList.add('active');
-        btn.remove();
-        overlay.querySelector('h2').focus();
-      };
-      
-      // Fonction pour fermer la pop-in
-      const closePopup = () => {
-        // Arrêter toute synthèse vocale en cours
-        window.speechSynthesis.cancel();
-        
-        overlay.classList.remove('active');
-        // Redonner le focus à l'élément précédemment focalisé
-        if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-          //FOCUS : previouslyFocusedElement.focus();
-        }
-      };
-      
-      
-      // Écouteurs d'événements
-      btn.addEventListener('click', openPopup);
-      closeBtn.addEventListener('click', closePopup);
-      
-      // Fermer la pop-in en cliquant en dehors
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-          closePopup();
-        }
-      });
-      
-      // Pour accessibilité : fermer avec la touche Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('active')) {
-          closePopup();
-        }
-      });
-      
-      // Fermeture automatique après 5 secondes si pas d'interaction
-      let buttonTimeout = setTimeout(() => {
-        btn.style.opacity = '0';
-        setTimeout(() => {
-          btn.remove();
-          // Ne pas retirer les régions live car elles peuvent être réutilisées
-          
-          // Redonner le focus à l'élément précédemment focalisé si le bouton n'a pas été activé
-          if (document.activeElement === btn && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-            //FOCUS : previouslyFocusedElement.focus();
-          }
-        }, 300); // Attendre la fin de la transition d'opacité
-      }, 20000); // Réduit à 20 secondes pour moins encombrer l'interface
-      
-      // Annuler le timeout si le bouton est cliqué
-      btn.addEventListener('click', () => {
-        clearTimeout(buttonTimeout);
-      });
-    
-    // Lors du clic, déclenche la synthèse vocale
-    btn.addEventListener('click', function() {
-      
-      // Annule toute synthèse en cours
-      window.speechSynthesis.cancel();
-  
-      // Crée l'utterance avec le texte et la langue souhaitée
-      const utterance = new SpeechSynthesisUtterance(txt);
-      utterance.lang = speechLang;
-  
-      // Fonction pour configurer et lancer la vocalisation
-      const speakWhenReady = () => {
-        const voices = window.speechSynthesis.getVoices();
-        // Choisit une voix correspondant à la langue si possible
-        const voice = voices.find(v => v.lang.startsWith(speechLang.split('-')[0])) || voices[0];
-        if (voice) {
-          utterance.voice = voice;
-        }
-        console.log("Speaking in tab:", txt);
-        window.speechSynthesis.speak(utterance);
-      };
-  
-      // Si aucune voix n'est encore chargée, attend l'événement 'voiceschanged'
-      if (window.speechSynthesis.getVoices().length === 0) {
-        console.log("Waiting for voices to load...");
-        window.speechSynthesis.onvoiceschanged = () => {
-          speakWhenReady();
-          // Nettoyage de l'écouteur pour éviter plusieurs appels
-          window.speechSynthesis.onvoiceschanged = null;
-        };
-      } else {
-        // Optionnel : laisser un petit délai après l'annulation
-        setTimeout(speakWhenReady, 100);
-      }
+async function initUI(tabId ) {
+  try{
+    await browser.tabs.sendMessage(tabId, {
+      action: 'initUI'
     });
-    },
-    args: [text, speechLang]
-  });
+  } catch (error) {
+    console.error('Erreur lors de l\'initialisation de l\'interface utilisateur:', error);
+  }
 }
-
 
 /**
  * Met à jour le message de chargement
+ * @param {number} tabId - ID de l'onglet où mettre à jour le message
+ * @param {string} message - Le message à afficher
  */
-function updateLoadingMessage(tabId, message) {
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: (msg) => {
-      const loadingContainer = document.querySelector('.loading-container-designemotionelements');
-      if (loadingContainer) loadingContainer.style.display = 'flex';
-
-      const loadingMessage = document.querySelector('.loading-message-designemotionelements');
-      
-      if (loadingMessage) loadingMessage.textContent = msg;
-      
-      // effacer le message après 15s
-      setTimeout(() => {
-        if (loadingMessage) loadingMessage.style.display = 'none';
-      }, 15000);
-    },
-    args: [message]
-  });
+async function updateLoadingMessage(tabId, message) {
+  try {
+    await browser.tabs.sendMessage(tabId, {
+      action: 'updateLoadingMessage',
+      message: message
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du message de chargement:', error);
+  }
 }
 
 /**
- * Cache le spinner et affiche le bouton
+ * Met à jour le message d'erreur
+ * @param {number} tabId - ID de l'onglet où mettre à jour le message
+ * @param {string} message - Le message à afficher
  */
-function hideSpinnerShowButton(tabId) {
-  browser.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      const browser = chrome || window.browser;
-
-      const loadingContainer = document.querySelector('.loading-container-designemotionelements');
-      if (loadingContainer) loadingContainer.style.display = 'none';
-      
-      const btn = document.querySelector('.design-emotion-btn-designemotionelements');
-      if (btn) btn.style.display = 'block';
-    },
-    args: []
-  });
+async function updateErrorMessage(tabId, message) {
+  try {
+    await browser.tabs.sendMessage(tabId, {
+      action: 'updateErrorMessage',
+      message: message
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du message d\'erreur:', error);
+  }
 }
+
+
+async function setTranscript(tabId, transcript) {
+  try {
+    await browser.tabs.sendMessage(tabId, {
+      action: 'setTranscript',
+      transcript: transcript
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du transcript:', error);
+  }
+}
+
+// Fonction utilitaire pour promisifier les fonctions callback-based
+const promisify = (fn, ...args) =>
+  new Promise((resolve, reject) => {
+    fn(...args, (result) => {
+      if (browser.runtime.lastError) {
+        reject(new Error(browser.runtime.lastError));
+      } else {
+        resolve(result);
+      }
+    });
+  });
+
 
 /**
  * Fonction principale qui déclenche le processus de transcription
  */
-function triggerTranscript() {
-    console.log("Design emotion appelé")
-     // Map des codes de langue aux voix disponibles
+async function triggerTranscript() {
+  console.log("Design emotion appelé")
+  
+
+
   const langMap = {
     'fr': 'french',
     'en': 'english',
@@ -507,96 +179,107 @@ function triggerTranscript() {
 
   // Convertir le code de langue au format BCP 47
   const longLang = langMap[browserLang.toLowerCase()] || 'english';
-
-  browser.storage.sync.get("serverUrl", (data) => {
+  
+   
+  try {
+    // Récupérer le serverUrl depuis le stockage
+    const data = await promisify(browser.storage.sync.get, "serverUrl");
     const serverUrl = data.serverUrl || DEFAULT_SERVER_URL;
-    // Récupère l'onglet actif
-    browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (!tabs || !tabs.length) return;
-      const activeTab = tabs[0];
-      const pageUrl = activeTab.url;
-      
-      // Afficher le spinner dès le début du processus
-      initLoadingSpinner(activeTab.id);
-      
-      // Injection de script dans l'onglet actif pour récupérer d'autres infos de la page
-      // Récupérer les infos de la page et la langue du navigateur
-      updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message'));
-      setLiveRegion(activeTab.id, browser.i18n.getMessage('analyzing_message'));
-      
+
+    // Obtenir l'onglet actif
+    const tabs = await promisify(browser.tabs.query, { active: true, currentWindow: true });
+    if (!tabs || !tabs.length) {
+      return;
+    }
+    
+    const activeTab = tabs[0];
+    const pageUrl = activeTab.url;
+
+    // S'assurer que le content script est chargé
+    await ensureContentScriptLoaded(activeTab.id);
+
+    // Initialiser l'UI
+    await initUI(activeTab.id);
+
+    // Mettre à jour le message de chargement
+    updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message'));
+
+    // Récupére les infos de la page
+    const results = await new Promise((resolve, reject) => {
       browser.scripting.executeScript({
         target: { tabId: activeTab.id },
-        func: () => {
-          return {
-            etag: document.querySelector('meta[http-equiv="etag"]')
-                  ? document.querySelector('meta[http-equiv="etag"]').content
-                  : "",
-            lastModified: document.lastModified
-          };
-        }
+        func: () => ({
+          etag: document.querySelector('meta[http-equiv="etag"]') ?
+                  document.querySelector('meta[http-equiv="etag"]').content : "",
+          lastModified: document.lastModified
+        })
       }, (results) => {
         if (browser.runtime.lastError || !results || !results[0]) {
-          console.error("Erreur lors de l'exécution du script dans la page.");
-          return;
+          reject(new Error("Erreur lors de l'exécution du script dans la page."));
+        } else {
+          resolve(results[0].result);
         }
-        const pageInfo = results[0].result;
-
-        const payload = {
-          url: pageUrl,
-          etag: pageInfo.etag,
-          lastmodifieddate: pageInfo.lastModified,
-          lang: longLang
-        };
-
-        // Envoie du POST pour récupérer le statut known et éventuellement un id
-        console.log('🌐 Sending POST to /transcript:', {
-          url: `${serverUrl}/transcript`,
-          payload
-        });
-        fetch(`${serverUrl}/transcript`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(data => {
-          console.log('📦 /transcript Response Data:', data);
-          if (data.known === 1 && data.transcript) {
-            // Si le transcript est déjà connu, mettre à jour le message et le vocaliser directement
-            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('transcript_ready_message'));
-            setLiveRegion(activeTab.id, browser.i18n.getMessage('transcript_ready_message'));
-            // Attendre un court instant pour montrer le message de génération
-            setTimeout(() => {
-              speakInTab(activeTab.id, data.transcript, browserLang, true);
-            }, 3000);
-          } else if (data.known === 0 && data.id) {
-            // Sinon, mettre à jour le message puis capturer un screenshot et l'envoyer au serveur
-            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message2'));
-            setLiveRegion(activeTab.id, browser.i18n.getMessage('analyzing_message2'));
-            processScreenshotWithModifiedOpacity(activeTab, data.id, serverUrl);
-
-          }
-          else {
-            // Si le transcript n'est pas connu, afficher un message d'erreur
-            updateLoadingMessage(activeTab.id, browser.i18n.getMessage('error_message'));
-            setLiveRegion(activeTab.id, browser.i18n.getMessage('error_message'));
-          } 
-        })
-        .catch(err => {
-          console.error("❗ Erreur lors du POST transcript:", err);
-          updateLoadingMessage(activeTab.id, locStrings.error_message);
-          setLiveRegion(activeTab.id, locStrings.error_message);
-          if (err instanceof Error) {
-            console.error('Error details:', {
-              message: err.message,
-              stack: err.stack
-            });
-          }
-        });
       });
     });
-  });
+
+    // Construire le payload à envoyer
+    const payload = {
+      url: pageUrl,
+      etag: results.etag,
+      lastmodifieddate: results.lastModified,
+      lang: longLang
+    };
+
+    console.log('🌐 Sending POST to /transcript:', {
+      url: `${serverUrl}/transcript`,
+      payload
+    });
+
+    // Effectuer l'appel POST vers le serveur
+    const response = await fetch(`${serverUrl}/transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const postData = await response.json();
+    console.log('📦 /transcript Response Data:', postData);
+
+    // Traiter la réponse du serveur
+    if (postData.known === 1 && postData.transcript) {
+      // Si le transcript est déjà connu, mettre à jour le message et le vocaliser directement
+      updateLoadingMessage(activeTab.id, browser.i18n.getMessage('transcript_ready_message'));
+      // Petite pause avant de vocaliser le transcript
+      setTimeout(() => {
+        setTranscript(activeTab.id, postData.transcript);
+      }, 3000);
+    } else if (postData.known === 0 && postData.id) {
+      // Sinon, mettre à jour le message d’attente et  capturer un screenshot et l'envoyer au serveur
+      updateLoadingMessage(activeTab.id, browser.i18n.getMessage('analyzing_message2'));
+      processScreenshotWithModifiedOpacity(activeTab, postData.id, serverUrl);
+    } else {
+      updateErrorMessage(activeTab.id, browser.i18n.getMessage('error_message'));
+    }
+  } catch (err) {
+    console.error("❗ Erreur lors de l'exécution du script:", err);
+    try {
+      const tabs = await promisify(browser.tabs.query, { active: true, currentWindow: true });
+      if (tabs && tabs.length) {
+        updateErrorMessage(tabs[0].id, browser.i18n.getMessage('error_message'));
+      }
+    } catch (e) {
+      console.error("❗ Erreur lors de la mise à jour du message d’erreur dans l'UI:", e);
+    }
+  }
 }
+
+
+
+/**
+ * 
+ * GESTION DES LISTENERS POPUP ou RACCOURCI CLAVIER
+ * 
+ */
+
 
 // Écoute du raccourci clavier défini dans manifest.json
 browser.commands.onCommand.addListener((command) => {
@@ -637,6 +320,16 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   }
 });
+
+
+
+/**
+ * 
+ * GESTION SCREENSHOT
+ * 
+ */
+
+
 
 /**
  * Modifie l'opacité des éléments fixes dans la page.
@@ -753,18 +446,6 @@ function restoreOpacityAndProcessImage(activeTab, dataUrl, serverUrl, id) {
     })
     .catch(err => console.error("Erreur lors du recadrage de l'image:", err));
   });
-}
-
-/**
- * Injecte dans l'onglet actif un script pour vocaliser le texte via l'API speechSynthesis.
- */
-function speakInTab(tabId, text, lang, skipSpinner = false) {
-  console.log("SpeakInTab called");
- 
-  initShowButton(tabId);
-  initPopup(tabId, text);
-  addButtonAndPopupInteractions(tabId, text, lang);
-  setLiveRegion(tabId, browser.i18n.getMessage('transcript_intro_message') +  text);
 }
 
 /**

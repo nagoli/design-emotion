@@ -28,13 +28,22 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content-script.js"],
-      "css": ["content-script.css"],
-      "run_at": "document_start"
+      "css": ["content-script.css"]
     }
   ],
   "icons": {
     "128": "icon128.png",
     "16": "icon16.png",
     "48": "icon48.png"
-  }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "tabs"
+  ]
 }

@@ -3,3 +3,7 @@
 - gérer les messages d erreurs dans le plugin 
 
 - url doivent etre filtrés : pas d ancre et de parametre
+
+- monter le rate limit par IP 
+
+
