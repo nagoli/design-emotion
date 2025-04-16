@@ -74,7 +74,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
 /**
  * 
  * 
- * MOTEUR DE TRANSCRIPTION
+ * INTERACTION AVEC CONTENT SCRIPT
  * 
  * */
 
@@ -141,6 +141,16 @@ async function setTranscript(tabId, transcript) {
   }
 }
 
+
+
+/**
+ * 
+ * 
+ * MOTEUR DE TRANSCRIPTION
+ * 
+ * */
+
+
 // Fonction utilitaire pour promisifier les fonctions callback-based
 const promisify = (fn, ...args) =>
   new Promise((resolve, reject) => {
@@ -152,6 +162,7 @@ const promisify = (fn, ...args) =>
       }
     });
   });
+
 
 
 /**

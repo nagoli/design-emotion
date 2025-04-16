@@ -7,6 +7,9 @@
 // Récupère la référence du navigateur
 const browser = chrome || window.browser;
 
+
+const BTN_TIMEOUT = 200000;
+
 // Constantes pour les ID et classes des éléments UI
 // IDs pour les conteneurs principaux
 const UI_OVERLAY_ID = 'ui-overlay-designemotionelements';
@@ -14,14 +17,17 @@ const LOADING_INFO_CONTAINER_ID = 'loading-container-designemotionelements';
 const LOADING_TXT_ID = 'loading-message-designemotionelements';
 const VOCALIZE_BUTTON_ID = 'design-emotion-btn-designemotionelements';
 const TRANSCRIPT_OVERLAY_ID = 'overlay-designemotionelements';
-const TRANSCRIPT_TXT_ID = 'popup-body-designemotionelements';
+const TRANSCRIPT_TXT_ID = 'transcript-txt-designemotionelements';
 
 const LIVE_REGION_ID = 'live-region-designemotionelements';
+
+const ACTIVE_CLASS = 'active-designemotionelements';
 
 // Classes pour les éléments secondaires
 const SPINNER_CLASS = 'spinner-designemotionelements';
 const TRANSCRIPT_CLASS = 'popup-designemotionelements';
 const TRANSCRIPT_HEADER_CLASS = 'popup-header-designemotionelements';
+const TRANSCRIPT_BODY_CLASS = 'popup-body-designemotionelements';
 const TRANSCRIPT_FOOTER_CLASS = 'popup-footer-designemotionelements';
 const TRANSCRIPT_CLOSE_BTN_CLASS = 'popup-close-btn-designemotionelements';
 
@@ -34,7 +40,7 @@ let transcriptText='';
 function hideElement(id) {
   const element = document.getElementById(id);
   if (element) {
-    element.style.display = 'none';
+    element.classList.remove(ACTIVE_CLASS);
   }
 }
 
@@ -45,11 +51,14 @@ function hideElement(id) {
  */
 function showElement(id) {
   const element = document.getElementById(id);
-  if (element) {
-    element.style.display = 'block';
+  if (!element) {
+    return false;
+  }
+  if (element.classList.contains(ACTIVE_CLASS)) {
     return true;
   }
-  return false; 
+  element.classList.add(ACTIVE_CLASS);
+  return true;
 }
 
 /**
@@ -68,6 +77,7 @@ function removeElement(id) {
  * Nettoie les éléments existants pour éviter les doublons
  */
 function cleanupElements() {
+  console.log('🧹 Nettoyage des éléments design emotion ');
   removeElement(LIVE_REGION_ID);
   removeElement(LOADING_INFO_CONTAINER_ID);
   removeElement(VOCALIZE_BUTTON_ID);
@@ -83,22 +93,22 @@ function createElements() {
               role="alert">
           </div>
 
-          <div id="${LOADING_INFO_CONTAINER_ID}" style="display: none;" aria-hidden="true" role="presentation">
+          <div id="${LOADING_INFO_CONTAINER_ID}"  aria-hidden="true" role="presentation">
             <div class="${SPINNER_CLASS}" aria-hidden="true"></div>
             <span id="${LOADING_TXT_ID}" aria-hidden="true"></span>
           </div>
 
-          <button id="${VOCALIZE_BUTTON_ID}" aria-hidden="true" role="presentation" style="display: none;">
+          <button id="${VOCALIZE_BUTTON_ID}" aria-hidden="true" role="presentation" >
             ${browser.i18n.getMessage('click_for_description')}
           </button>
 
-          <div id="${TRANSCRIPT_OVERLAY_ID}" aria-hidden="true" role="presentation" style="display: none;">
+          <div id="${TRANSCRIPT_OVERLAY_ID}" aria-hidden="true" role="presentation" >
             <div class="${TRANSCRIPT_CLASS}">
               <div class="${TRANSCRIPT_HEADER_CLASS}">
                 <h2>${browser.i18n.getMessage('popup_header')}</h2>
               </div>
-              <div id="${TRANSCRIPT_TXT_ID}">
-                <p>${browser.i18n.getMessage('popup_body')}</p>
+              <div class="${TRANSCRIPT_BODY_CLASS}">
+                <p id="${TRANSCRIPT_TXT_ID}">${browser.i18n.getMessage('popup_body')}</p>
               </div>
               <div class="${TRANSCRIPT_FOOTER_CLASS}">
                 <button class="${TRANSCRIPT_CLOSE_BTN_CLASS}">
@@ -141,24 +151,18 @@ function addButtonAndPopupInteractions() {
   
 
   // Fonction pour ouvrir la pop-in
-  const openPopup = () => {
-    overlay.classList.add('active');
-    btn.remove();
+  const openTranscriptPopup = () => {
+    hideElement(VOCALIZE_BUTTON_ID);
+    showElement(TRANSCRIPT_OVERLAY_ID);
     overlay.querySelector('h2').focus();
   };
   
   // Fonction pour fermer la pop-in
-  const closePopup = () => {
+  const closeTranscriptPopup = () => {
     // Arrêter toute synthèse vocale en cours
     window.speechSynthesis.cancel();
     
-    overlay.classList.remove('active');
-    
-    // Cacher également l'overlay global
-    const uiOverlay = document.getElementById(UI_OVERLAY_ID);
-    if (uiOverlay) {
-      uiOverlay.classList.remove('active');
-    }
+    cleanupElements();
   
     // Redonner le focus à l'élément précédemment focalisé
     if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
@@ -167,21 +171,20 @@ function addButtonAndPopupInteractions() {
   };
   
   // Écouteurs d'événements
-  btn.addEventListener('click', openPopup);
-
-  closeBtn.addEventListener('click', closePopup);
+  
+  closeBtn.addEventListener('click', closeTranscriptPopup);
   
   // Fermer la pop-in en cliquant en dehors
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
-      closePopup();
+      closeTranscriptPopup();
     }
   });
   
   // Pour accessibilité : fermer avec la touche Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlay.classList.contains('active')) {
-      closePopup();
+      closeTranscriptPopup();
     }
   });
   
@@ -190,7 +193,7 @@ function addButtonAndPopupInteractions() {
     if (btn) {
       btn.style.opacity = '0';
       setTimeout(() => {
-        if (btn) btn.remove();
+        cleanupElements();
         
         // Redonner le focus à l'élément précédemment focalisé
         if (document.activeElement === btn && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
@@ -198,15 +201,12 @@ function addButtonAndPopupInteractions() {
         }
       }, 300); // Attendre la fin de la transition d'opacité
     }
-  }, 20000);
+  }, BTN_TIMEOUT);
   
-  // Annuler le timeout si le bouton est cliqué
-  btn.addEventListener('click', () => {
-    clearTimeout(buttonTimeout);
-  });
-  
-  // Lors du clic, déclenche la synthèse vocale
+  // Lors du clic, ouvre la popup de transcript et déclenche la synthèse vocale
   btn.addEventListener('click', function() {
+    openTranscriptPopup();
+    clearTimeout(buttonTimeout);
     // Annule toute synthèse en cours
     window.speechSynthesis.cancel();
     
@@ -256,7 +256,7 @@ function setInLiveRegion(txt = '') {
   }
   if (txt) {
     liveRegion.textContent = txt;
-    console.log('Live region should vocalize', txt);
+    console.log('Live region should vocalize : ', txt);
   }
 }
 
@@ -268,23 +268,13 @@ function setInLiveRegion(txt = '') {
 function updateLoadingMessage(message) {
   // Mettre à jour la région live pour l'accessibilité
   setInLiveRegion(message);
-
-  // Récupérer le container de chargement et l'overlay
-  const loadingContainer = document.getElementById(LOADING_INFO_CONTAINER_ID);
-  if (!loadingContainer) {
-    console.error('Loading container not found');
-    return;
-  } 
-  const loadingMessage = document.getElementById(LOADING_TXT_ID);
-  if (!loadingMessage) {
-    console.error('Loading message not found');
-    return;
+  try {
+    // Mettre à jour le message et afficher le container
+    document.getElementById(LOADING_TXT_ID).textContent = message;
+    showElement(LOADING_INFO_CONTAINER_ID);
+  } catch (error) {
+    console.error('Error updating loading message:', error);
   }
-
-  // Mettre à jour le message et afficher le container
-  loadingMessage.textContent = message;
-  loadingContainer.style.display = 'flex';
-
 }
 
 /**
@@ -295,14 +285,11 @@ function updateLoadingMessage(message) {
 function setTranscript(text) {
   setInLiveRegion(browser.i18n.getMessage('transcript_intro_message') + text);
   transcriptText = text;
-  const transcript = document.getElementById(TRANSCRIPT_TXT_ID);
-  if (!transcript) {
-    console.error('Transcript element not found');
-    return;
-  }
-  if (text) {
+  try {
+    const transcript = document.getElementById(TRANSCRIPT_TXT_ID);
     transcript.textContent = text;
-    console.log('Transcript should vocalize', text);
+  } catch (error) {
+    console.error('Error setting transcript:', error);
   }
 }
 
@@ -335,9 +322,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
       
     case 'setTranscript':
-      setTranscript(message.text); 
       hideElement(LOADING_INFO_CONTAINER_ID);
       showElement(VOCALIZE_BUTTON_ID);
+      setTranscript(message.transcript); 
       sendResponse({ status: 'Transcript shown' });
       break;
       
