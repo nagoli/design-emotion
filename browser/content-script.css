@@ -1,50 +1,3 @@
-@keyframes spin-designemotionelements {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Styles pour le container de chargement */
-#loading-container-designemotionelements {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 10px 20px;
-  z-index: 10000;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  transition: opacity 0.3s ease;
-  display: none;
-  align-items: center;
-  justify-content: center;
-
-}
-
-#loading-container-designemotionelements.active-designemotionelements {
-  display: flex;
-}
-
-
-/* Styles pour le spinner */
-.spinner-designemotionelements {
-  margin-right: 10px;
-  width: 16px;
-  height: 16px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top: 3px solid #fff;
-  animation: spin-designemotionelements 1s linear infinite;
-}
-
-/* Styles pour le message de chargement */
-#loading-message-designemotionelements {
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: bold;
-}
 
 /* Styles pour la région live d'accessibilité */
 #live-region-designemotionelements {
@@ -60,57 +13,27 @@
   display: block;
 }
 
-/* Styles pour le bouton principal */
-#design-emotion-btn-designemotionelements {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  transition: opacity 0.3s ease;
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: bold;
-  display:none;
-  z-index: 10000;
-}
-#design-emotion-btn-designemotionelements.active-designemotionelements {
-  display:block;
-}
 
-#design-emotion-btn-designemotionelements:hover {
-  background-color: #0056b3;
-}
 
 /* Styles pour l'overlay et la popup */
-#overlay-designemotionelements {
+.overlay-designemotionelements {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.8);
   justify-content: center;
   align-items: center;
   z-index: 10000;
   transition: opacity 0.3s ease, visibility 0.3s ease;
-  display: none;
-  opacity: 0;
-  visibility: hidden;
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+
   /* L'attribut aria-hidden est défini dans le HTML via JavaScript */
 }
 
-#overlay-designemotionelements.active-designemotionelements {
-  opacity: 1;
-  visibility: visible;
-  display: flex;
-}
 
 .popup-designemotionelements {
   background-color: rgba(0, 0, 0, 1);
@@ -124,9 +47,7 @@
   transition: transform 0.3s ease;
 }
 
-#overlay-designemotionelements.active-designemotionelements .popup-designemotionelements {
-  transform: scale(1);
-}
+
 
 .popup-header-designemotionelements {
   color: white;
@@ -156,6 +77,11 @@
   line-height: 1.5;
   overflow-y: auto;
   margin: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
 }
 
 .popup-footer-designemotionelements {
@@ -181,3 +107,63 @@
 .popup-close-btn-designemotionelements:hover {
   background-color: #0056b3;
 }
+
+
+/* Styles pour le spinner */
+
+@keyframes spin-designemotionelements {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.spinner-designemotionelements {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(0,0,0,0.2);
+  border-radius: 50%;
+  border-top: 3px solid black;
+  animation: spin-designemotionelements 1s linear infinite;
+  display: none;
+}
+
+.spinner-designemotionelements.active-designemotionelements {
+  display: block;
+}
+
+
+
+/* Styles pour le message  */
+
+.popup-txt-designemotionelements {
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: normal;
+  text-align: center;
+  margin: 0 12px;
+  color: black;
+}
+
+
+
+/* Styles pour le bouton interne */
+.popup-internal-btn-designemotionelements {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: opacity 0.3s ease;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+  display:none;
+}
+.popup-internal-btn-designemotionelements.active-designemotionelements {
+  display:block;
+}
+
+.popup-internal-btn-designemotionelements:hover {
+  background-color: #0056b3;
+}
+

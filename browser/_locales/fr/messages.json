@@ -28,7 +28,7 @@
     "description": "Message affiché quand la transcription est prête"
   },
   "click_for_description": {
-    "message": "Cliquez pour écouter la transcription des intentions du design de ce site",
+    "message": "Cliquez pour vocaliser la transcription",
     "description": "Message sur le bouton pour voir la transcription"
   },
   "popup_header": {
@@ -52,7 +52,7 @@
     "description": "Message d'erreur affiché en cas d'échec"
   },
   "transcript_intro_message": {
-    "message": "Voici un essai de transcription des émotions du design graphique de cette page : ",
+    "message": "Voici la transcription des émotions du design graphique de cette page : \n",
     "description": "Introduction à la transcription"
   }
 }
