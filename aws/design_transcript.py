@@ -45,6 +45,64 @@ PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te conce
 """)
 
 
+
+TECH_CONFIG = {
+    "redis_host": "crisp-moray-17911.upstash.io",
+    "redis_port": "6379",
+    "secret_name": "openai-key",
+    "aws_region": "eu-west-3",
+    "moderation-checker-main": "openai",
+    "moderation-checker-secondary": "openrouter",
+    "openrouter_url": "https://api.openrouter.ai/v1",
+}
+
+LLM_CONFIG = {
+    "transcript":{
+        "main": {
+            "api": "openai", 
+            "model": "gpt-4o", 
+            "prompt": """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …
+            Fait ce transcript dans la langue : {target_lang}""",
+        },
+        "secondary": {
+            "api": "openrouter", 
+            "model": "openai/gpt-4.1", 
+            "prompt": """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …
+            Fait ce transcript dans la langue : {target_lang}"""
+        },
+    },
+    "translate":{
+        "main": {   
+            "api": "openai", 
+            "model": "gpt-4o", 
+            "prompt": "Translate from {source_lang} to {target_lang}. If it is the same language, just return the given text with no additionnal comment. If you translate, just return the translation with no additionnal comment."
+        },
+        "secondary": {
+            "api": "openrouter", 
+            "model": "openai/gpt-4.1", 
+            "prompt": "Translate from {source_lang} to {target_lang}. If it is the same language, just return the given text with no additionnal comment. If you translate, just return the translation with no additionnal comment."
+        },
+    },
+    "moderated":{
+        "main": {
+            "api": "openai", 
+            "model": "gpt-4o", 
+            "prompt": """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …"""
+        },
+        "secondary": {
+            "api": "openrouter", 
+            "model": "openai/gpt-4.1", 
+            "prompt": """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …"""
+        },
+    },
+}
+
+BUSINESS_CONFIG = {
+    "id_cache_limit": 60,
+    "transcript_cache_limit": 60*60*24*15,
+}
+    
+
 # -----------------------------------------------------------------------------
 # Redis Cache Functions
 # -----------------------------------------------------------------------------
@@ -244,19 +302,35 @@ def checkIP(ip: str) -> bool:
 
 
 
-def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> str:
+def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str, use_secondary:bool = False) -> str:
     """
     Helper function to translate a given text from source_lang to target_lang using ChatGPT.
     """
     print("translate called")
     logger.info(f"Translating transcript from {source_lang} to {target_lang} via ChatGPT.")
-    client = openai.OpenAI(api_key=_get_keys()["OPENAI_API_KEY"])
+    config = LLM_CONFIG["transcript"]["main"]
+    if use_secondary:
+        config = LLM_CONFIG["transcript"]["secondary"]
+    if (config["api"] == "openrouter"):
+        client = OpenAI(
+            base_url=TECH_CONFIG["openrouter_url"],
+            api_key=_get_keys()["OPENROUTER_API_KEY"],
+        )
+    elif (config["api"] == "openai"):
+        client = openai.OpenAI(api_key=_get_keys()["OPENAI_API_KEY"])
+    else:
+        raise ValueError("Invalid LLM API specified in configuration.")
 
     try:
+        context={
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+        }
+        prompt = config["prompt"].format(**context)
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=config["model"],
             messages=[
-                {"role": "system", "content": f"Translate from {source_lang} to {target_lang}. If it is the same language, just return the given text with no additionnal comment. If you translate, just return the translation with no additionnal comment."},
+                {"role": "system", "content": prompt},
                 {"role": "user", "content": text}
             ]
         )
@@ -268,7 +342,7 @@ def _translate_with_chatgpt(text: str, source_lang: str, target_lang: str) -> st
 
 
 
-def generate_design_transcript(img: bytes, lang: str) -> str:
+def generate_design_transcript(img: bytes, lang: str, use_secondary:bool = False) -> str:
     """
     Sends the image to ChatGPT-4 with a predefined prompt stored in an environment variable (PROMPT).
     The ChatGPT API key is stored in AWS Secret Manager.
@@ -276,13 +350,19 @@ def generate_design_transcript(img: bytes, lang: str) -> str:
     print("transcript called")
     logger.info("Generating design transcript via ChatGPT.")
     
-    if (False):
+    config = LLM_CONFIG["transcript"]["main"]
+    if use_secondary:
+        config = LLM_CONFIG["transcript"]["secondary"]
+    
+    if (config["api"] == "openrouter"):
         client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.environ.get("OPENROUTER_API_KEY"),
+            base_url=TECH_CONFIG["openrouter_url"],
+            api_key=_get_keys()["OPENROUTER_API_KEY"],
         )
-    else : 
+    elif (config["api"] == "openai"):
         client = openai.OpenAI(api_key=_get_keys()["OPENAI_API_KEY"])
+    else:
+        raise ValueError("Invalid LLM API specified in configuration.")
 
 
     # Convert bytes to base64 string
@@ -293,27 +373,24 @@ def generate_design_transcript(img: bytes, lang: str) -> str:
         logger.error("Expected bytes for image data")
         raise ValueError("Image data must be bytes")
 
+
+    context = {
+        "target_lang": lang,
+    }
+    prompt = config["prompt"].format(**context)
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=config["model"],
             messages=[
-                {"role": "system", "content": PROMPT},
+                {"role": "system", "content": prompt},
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "text",
-                            "text": "Analyze this website :",
-                        },
                         {
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/png;base64,{base64_image}"
                             },
-                        },
-                        {
-                            "type": "text",
-                            "text": f"Return transcript in language: {lang}",
                         },
                     ],
                 },

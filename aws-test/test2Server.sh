@@ -2,7 +2,7 @@
 
 # Vérifie qu'un paramètre est passé
 if [ -z "$1" ]; then
-  echo "Usage: $0 {transcript|transcript-en|transcript-image|cache|clear|clear-key}"
+  echo "Usage: $0 {transcript|transcript-en|transcript-image|cache|clear|clear-key|force-transcript}"
   exit 1
 fi
 
@@ -53,12 +53,29 @@ case "$1" in
 
   clear-key)
     echo "Exécution de la commande cache..."
-    curl -X DELETE "$uri/cache/clear?key=transcript_cache:https://respiration-yoga.fr/"
+    curl -X DELETE "$uri/cache/clear?key=transcript_cache:https://respiration-yoga.fr"
     ;;
 
+force-transcript)
+    echo -e "Exécution de la commande force-transcript...\n"
+    curl -X DELETE "$uri/cache/clear?key=transcript_cache:https://respiration-yoga.fr"
+    echo -e "\nRequete au cache :"
+    curl -X POST $uri/transcript \
+      -H "Content-Type: application/json" \
+      -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
+    echo -e "\nTranscript depuis le screenshot :"
+    curl -X POST $uri/image-transcript \
+      -H "Content-Type: application/json" \
+      --data-binary @../aws-test/test2_request.json
+    echo -e "\nTraduction du cache :"
+    curl -X POST $uri/transcript \
+      -H "Content-Type: application/json" \
+      -d '{"url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
+    ;;
+    
   *)
     echo "Paramètre non reconnu : $1"
-    echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key}"
+    echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key|force-transcript}"
     exit 1
     ;;
 esac
