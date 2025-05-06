@@ -26,29 +26,17 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
-# Environment variables expected (example):
-#   REDIS_HOST: Host of the Redis cluster (ElastiCache).
-#   REDIS_PORT: Port of the Redis cluster.
-#   SECRET_NAME: Name of the secret in AWS Secrets Manager that holds the OpenAI API key.
-#   AWS_REGION: AWS region where the secret is stored.
-#   PROMPT: Predefined prompt for ChatGPT to analyze the design.
-
-REDIS_HOST = os.environ.get("REDIS_HOST", "crisp-moray-17911.upstash.io")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
-SECRET_NAME = os.environ.get("SECRET_NAME", "openai-key")
-AWS_REGION = os.environ.get("AWS_REGION_DEPLOY","eu-west-3")
-ID_CACHE_LIMIT = int(os.environ.get("ID_CACHE_LIMIT", "60"))
-tmp_transcript_cache_limit = 60*60*24*15 # 15j
-TRANSCRIPT_CACHE_LIMIT = int(os.environ.get("TRANSCRIPT_CACHE_LIMIT", str(tmp_transcript_cache_limit)))
-PROMPT = os.environ.get("PROMPT", """Analyse cette image de site web en te concentrant sur les émotions et l’ambiance générale véhiculées par la structure, les couleurs, et les éléments graphiques. Ignore le contenu textuel sauf s’il contribue directement à l’émotion. Traduis ces émotions en une expérience sensorielle et intellectuelle pour une personne aveugle, en utilisant des références au toucher, au son, aux odeurs, au goût, ou à des concepts abstraits. Par exemple, décris une ambiance comme une sensation de texture douce et chaleureuse, un bruit apaisant ou stimulant, ou une odeur évoquant une atmosphère spécifique. Ne fais aucune référence explicite aux aspects visuels ou à la disposition graphique. Ne soit pas trop ambiance publicité. essaie de faire vivre l’émotion sans enjoliver. Commence par Ce site …
-""")
-
-
+ 
+ 
+ #----------------------
+ # PARAMETERS
+ #----------------------
 
 TECH_CONFIG = {
     "redis_host": "crisp-moray-17911.upstash.io",
     "redis_port": "6379",
+    "dynamodb_id_table": "design-emotion_id",
+    "dynamodb_region": "eu-west-3",
     "secret_name": "openai-key",
     "aws_region": "eu-west-3",
     "moderation-checker-main": "openai",
@@ -73,8 +61,6 @@ LLM_VARIABLES = {
         
         "moderated":  "Analyse cette image de site web en te concentrant sur les émotions… (même que transcript)"
       },
-      "translate": """Translate from {source_lang} to {target_lang}. If it is the same language, just return the given text with no additionnal comment. If you translate, just return the translation with no additionnal comment.""",
-      "moderated": None
     },
     
     "gpt4.1-or": {
@@ -160,8 +146,8 @@ def _get_keys():
     """
     global _keycache 
     if _keycache is None :
-        secret_name = SECRET_NAME
-        region_name = AWS_REGION
+        secret_name = TECH_CONFIG['secret_name']
+        region_name = TECH_CONFIG['aws_region']
 
         # Create a Secrets Manager client
         session = boto3.session.Session()
@@ -188,23 +174,23 @@ def _get_keys():
 print("create redis client")
 try:
     # Configuration pour Upstash en production
-    if REDIS_HOST != "localhost" and REDIS_HOST != "host.docker.internal":
+    if TECH_CONFIG['redis_host'] != "localhost" and TECH_CONFIG['redis_host'] != "host.docker.internal":
         redis_client = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
+            host=TECH_CONFIG['redis_host'],
+            port=TECH_CONFIG['redis_port'],
             password=_get_keys()['REDIS_KEY'],
             ssl=True,
             decode_responses=True
         )
-        print(f"Connected to Upstash Redis at {REDIS_HOST}")
+        print(f"Connected to Upstash Redis at {TECH_CONFIG['redis_host']}")
     # Configuration locale pour le développement
     else:
         redis_client = redis.Redis(
             host="127.0.0.1",
-            port=REDIS_PORT,
+            port=TECH_CONFIG['redis_port'],
             decode_responses=True
         )
-        print(f"Connected to local Redis at {REDIS_HOST}")
+        print(f"Connected to local Redis at {TECH_CONFIG['redis_host']}")
     
     # Test de connexion
     redis_client.ping()
@@ -269,7 +255,7 @@ def create_cached_url_info(url: str, lang: str, etag: str) -> str:
         "lang":lang,
         "etag": etag,
     }
-    redis_client.set(cache_key, json.dumps(cache_value), ex=ID_CACHE_LIMIT)
+    redis_client.set(cache_key, json.dumps(cache_value), ex=BUSINESS_CONFIG['id_cache_limit'])
     return short_id
 
 def pop_cached_url_info(short_id: str) -> str:
@@ -305,7 +291,7 @@ def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: s
             
             # Update cache with modified transcripts
             existing_value["transcripts"] = transcripts
-            redis_client.set(cache_key, json.dumps(existing_value), ex=TRANSCRIPT_CACHE_LIMIT)
+            redis_client.set(cache_key, json.dumps(existing_value), ex=BUSINESS_CONFIG['transcript_cache_limit'])
             return
     
     # No existing cache or different etag, create new entry
@@ -315,7 +301,7 @@ def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: s
             (lang, transcript)
         ]
     }
-    redis_client.set(cache_key, json.dumps(cache_value), ex=TRANSCRIPT_CACHE_LIMIT)
+    redis_client.set(cache_key, json.dumps(cache_value), ex=BUSINESS_CONFIG['transcript_cache_limit'])
 
 
 # -----------------------------------------------------------------------------
@@ -339,6 +325,263 @@ def checkIP(ip: str) -> bool:
         # Nouvelle IP, on l'ajoute avec TTL=60s
         redis_client.set(cache_key, "1", ex=60)
         return True
+
+
+# -----------------------------------------------------------------------------
+# DynamoDB Functions 
+# Config in TECH_CONFIG 
+# The dynamodb structure is as follows:
+#{
+#  "email": email,
+#  "credits-left": creditsLeft,
+#  "credits-used": creditsUsed,
+#  "frontKeys": list[FrontendKeys],
+#  "usage-total": accessCount,
+#  "usage-history": list[(date, url, creditCost)],
+#  "foundings-total": totalAmount,
+#  "foundings-history": list[(date, payedAmount, credits)]
+#}
+
+# example : 
+# {
+#  "email": "client@example.com",
+#  "credits-left": 45,
+#  "credits-used": 12,
+#  "frontKeys": ["key1", "key2"],
+#  "usage-total": 12,
+#  "usage-history": [("2025-01-01", "www.mysite.org",1)],
+#  "foundings-total": 3.99,
+#  "foundings-history": [("2025-01-01", "3.99","50")]
+#}
+
+# -----------------------------------------------------------------------------
+import boto3
+
+DYNAMODB_ID_TABLE = None
+
+def get_dynamodb_id_table():
+    global DYNAMODB_ID_TABLE
+    if DYNAMODB_ID_TABLE is None:
+        dynamodb = boto3.resource('dynamodb', region_name=TECH_CONFIG['dynamodb_region'])
+        DYNAMODB_ID_TABLE = dynamodb.Table(TECH_CONFIG['dynamodb_id_table'])
+    return DYNAMODB_ID_TABLE
+
+def isValidFrontKey(email: str, key: str) -> bool:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' not in response:
+        return False
+    
+    if 'frontKeys' not in response['Item']:
+        return False
+    
+    return key in response['Item']['frontKeys']
+    
+def addFrontKey(email: str, key: str) -> None:
+    table = get_dynamodb_id_table()
+    
+    # First check if the email exists
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' not in response:
+        # Create new user record if not exists
+        table.put_item(
+            Item={
+                'email': email,
+                'credits-left': 0,
+                'credits-used': 0,
+                'frontKeys': [key],
+                'usage-total': 0,
+                'usage-history': [],
+                'foundings-total': 0.0,
+                'foundings-history': []
+            }
+        )
+    else:
+        # Add key to existing user
+        front_keys = response['Item'].get('frontKeys', [])
+        if key not in front_keys:
+            front_keys.append(key)
+            table.update_item(
+                Key={'email': email},
+                UpdateExpression='SET frontKeys = :keys',
+                ExpressionAttributeValues={':keys': front_keys}
+            )
+
+def removeFrontKey(email: str, key: str) -> None:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'frontKeys' in response['Item']:
+        front_keys = response['Item']['frontKeys']
+        if key in front_keys:
+            front_keys.remove(key)
+            table.update_item(
+                Key={'email': email},
+                UpdateExpression='SET frontKeys = :keys',
+                ExpressionAttributeValues={':keys': front_keys}
+            )
+
+def addCredits(email: str, date: str, payedAmount: float, credits: int) -> None:
+    table = get_dynamodb_id_table()
+    
+    # Check if user exists
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' not in response:
+        # Create new user with credits
+        table.put_item(
+            Item={
+                'email': email,
+                'credits-left': credits,
+                'credits-used': 0,
+                'frontKeys': [],
+                'usage-total': 0,
+                'usage-history': [],
+                'foundings-total': payedAmount,
+                'foundings-history': [(date, str(payedAmount), str(credits))]
+            }
+        )
+    else:
+        # Update existing user
+        item = response['Item']
+        credits_left = item.get('credits-left', 0) + credits
+        foundings_total = item.get('foundings-total', 0.0) + payedAmount
+        foundings_history = item.get('foundings-history', [])
+        foundings_history.append((date, str(payedAmount), str(credits)))
+        
+        table.update_item(
+            Key={'email': email},
+            UpdateExpression='SET #cl = :credits_left, #ft = :foundings_total, #fh = :foundings_history',
+            ExpressionAttributeNames={
+                '#cl': 'credits-left',
+                '#ft': 'foundings-total',
+                '#fh': 'foundings-history'
+            },
+            ExpressionAttributeValues={
+                ':credits_left': credits_left,
+                ':foundings_total': foundings_total,
+                ':foundings_history': foundings_history
+            }
+        )
+
+def useCredits(email: str, date: str, url: str, creditCost: int) -> None:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response:
+        item = response['Item']
+        credits_left = item.get('credits-left', 0)
+        
+        # Check if user has enough credits
+        if credits_left >= creditCost:
+            credits_left -= creditCost
+            credits_used = item.get('credits-used', 0) + creditCost
+            usage_total = item.get('usage-total', 0) + 1
+            usage_history = item.get('usage-history', [])
+            usage_history.append((date, url, creditCost))
+            
+            table.update_item(
+                Key={'email': email},
+                UpdateExpression='SET #cl = :credits_left, #cu = :credits_used, #ut = :usage_total, #uh = :usage_history',
+                ExpressionAttributeNames={
+                    '#cl': 'credits-left',
+                    '#cu': 'credits-used',
+                    '#ut': 'usage-total',
+                    '#uh': 'usage-history'
+                },
+                ExpressionAttributeValues={
+                    ':credits_left': credits_left,
+                    ':credits_used': credits_used,
+                    ':usage_total': usage_total,
+                    ':usage_history': usage_history
+                }
+            )
+
+def getUsageHistory(email: str) -> list:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'usage-history' in response['Item']:
+        return response['Item']['usage-history']
+    return []
+
+def getFoundingsHistory(email: str) -> list:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'foundings-history' in response['Item']:
+        return response['Item']['foundings-history']
+    return []
+
+def getUsageTotal(email: str) -> int:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'usage-total' in response['Item']:
+        return response['Item']['usage-total']
+    return 0
+
+def getFoundingsTotal(email: str) -> float:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'foundings-total' in response['Item']:
+        return response['Item']['foundings-total']
+    return 0.0
+
+def getCreditsLeft(email: str) -> int:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'credits-left' in response['Item']:
+        return response['Item']['credits-left']
+    return 0
+
+def getCreditsUsed(email: str) -> int:
+    table = get_dynamodb_id_table()
+    
+    response = table.get_item(
+        Key={'email': email}
+    )
+    
+    if 'Item' in response and 'credits-used' in response['Item']:
+        return response['Item']['credits-used']
+    return 0
+
+def getCreditsTotal(email: str) -> int:
+    return getCreditsLeft(email) + getCreditsUsed(email)
+
+
 
 
 # -----------------------------------------------------------------------------
