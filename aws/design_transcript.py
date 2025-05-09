@@ -12,7 +12,8 @@ import hashlib
 from botocore.exceptions import ClientError
 import base64
 
-
+import datetime
+from decimal import Decimal
 
 # -----------------------------------------------------------------------------
 # Global Configuration & Initialization
@@ -35,7 +36,7 @@ if not logger.handlers:
 TECH_CONFIG = {
     "redis_host": "crisp-moray-17911.upstash.io",
     "redis_port": "6379",
-    "dynamodb_id_table": "design-emotion_id",
+    "dynamodb_id_table": "design_emotion_id",
     "dynamodb_region": "eu-west-3",
     "secret_name": "openai-key",
     "aws_region": "eu-west-3",
@@ -330,6 +331,12 @@ def checkIP(ip: str) -> bool:
 # -----------------------------------------------------------------------------
 # DynamoDB Functions 
 # Config in TECH_CONFIG 
+
+def get_current_date():
+    """
+    Renvoie la date en cours sous la forme '%Y-%m-%d %H:%M:%S'
+    """
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # The dynamodb structure is as follows:
 #{
 #  "email": email,
@@ -366,7 +373,7 @@ def get_dynamodb_id_table():
         DYNAMODB_ID_TABLE = dynamodb.Table(TECH_CONFIG['dynamodb_id_table'])
     return DYNAMODB_ID_TABLE
 
-def isValidFrontKey(email: str, key: str) -> bool:
+def is_valid_front_key(email: str, key: str) -> bool:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -381,7 +388,7 @@ def isValidFrontKey(email: str, key: str) -> bool:
     
     return key in response['Item']['frontKeys']
     
-def addFrontKey(email: str, key: str) -> None:
+def add_front_key(email: str, key: str) -> None:
     table = get_dynamodb_id_table()
     
     # First check if the email exists
@@ -414,7 +421,7 @@ def addFrontKey(email: str, key: str) -> None:
                 ExpressionAttributeValues={':keys': front_keys}
             )
 
-def removeFrontKey(email: str, key: str) -> None:
+def remove_front_key(email: str, key: str) -> None:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -431,9 +438,11 @@ def removeFrontKey(email: str, key: str) -> None:
                 ExpressionAttributeValues={':keys': front_keys}
             )
 
-def addCredits(email: str, date: str, payedAmount: float, credits: int) -> None:
+def add_credits(email: str, payed_amount: float, credits: int) -> None:
     table = get_dynamodb_id_table()
-    
+    #fixe la date à la date du jour avec l'heure
+    date = get_current_date()
+    payed_amount = Decimal(payed_amount)
     # Check if user exists
     response = table.get_item(
         Key={'email': email}
@@ -449,17 +458,17 @@ def addCredits(email: str, date: str, payedAmount: float, credits: int) -> None:
                 'frontKeys': [],
                 'usage-total': 0,
                 'usage-history': [],
-                'foundings-total': payedAmount,
-                'foundings-history': [(date, str(payedAmount), str(credits))]
+                'foundings-total': payed_amount,
+                'foundings-history': [(date, str(payed_amount), str(credits))]
             }
         )
     else:
         # Update existing user
         item = response['Item']
         credits_left = item.get('credits-left', 0) + credits
-        foundings_total = item.get('foundings-total', 0.0) + payedAmount
+        foundings_total = Decimal(item.get('foundings-total', 0)) + payed_amount
         foundings_history = item.get('foundings-history', [])
-        foundings_history.append((date, str(payedAmount), str(credits)))
+        foundings_history.append((date, str(payed_amount), str(credits)))
         
         table.update_item(
             Key={'email': email},
@@ -476,7 +485,7 @@ def addCredits(email: str, date: str, payedAmount: float, credits: int) -> None:
             }
         )
 
-def useCredits(email: str, date: str, url: str, creditCost: int) -> None:
+def use_credits(email: str, credit_cost: int, url: str = "test-url") -> None:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -488,12 +497,13 @@ def useCredits(email: str, date: str, url: str, creditCost: int) -> None:
         credits_left = item.get('credits-left', 0)
         
         # Check if user has enough credits
-        if credits_left >= creditCost:
-            credits_left -= creditCost
-            credits_used = item.get('credits-used', 0) + creditCost
+        if credits_left >= credit_cost:
+            credits_left -= credit_cost
+            credits_used = item.get('credits-used', 0) + credit_cost
             usage_total = item.get('usage-total', 0) + 1
             usage_history = item.get('usage-history', [])
-            usage_history.append((date, url, creditCost))
+            date = get_current_date()
+            usage_history.append((date, url, str(credit_cost)))
             
             table.update_item(
                 Key={'email': email},
@@ -512,7 +522,7 @@ def useCredits(email: str, date: str, url: str, creditCost: int) -> None:
                 }
             )
 
-def getUsageHistory(email: str) -> list:
+def get_usage_history(email: str) -> list:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -523,7 +533,7 @@ def getUsageHistory(email: str) -> list:
         return response['Item']['usage-history']
     return []
 
-def getFoundingsHistory(email: str) -> list:
+def get_foundings_history(email: str) -> list:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -534,7 +544,7 @@ def getFoundingsHistory(email: str) -> list:
         return response['Item']['foundings-history']
     return []
 
-def getUsageTotal(email: str) -> int:
+def get_usage_total(email: str) -> int:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -545,7 +555,7 @@ def getUsageTotal(email: str) -> int:
         return response['Item']['usage-total']
     return 0
 
-def getFoundingsTotal(email: str) -> float:
+def get_foundings_total(email: str) -> float:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -556,7 +566,7 @@ def getFoundingsTotal(email: str) -> float:
         return response['Item']['foundings-total']
     return 0.0
 
-def getCreditsLeft(email: str) -> int:
+def get_credits_left(email: str) -> int:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -567,7 +577,7 @@ def getCreditsLeft(email: str) -> int:
         return response['Item']['credits-left']
     return 0
 
-def getCreditsUsed(email: str) -> int:
+def get_credits_used(email: str) -> int:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -578,11 +588,34 @@ def getCreditsUsed(email: str) -> int:
         return response['Item']['credits-used']
     return 0
 
-def getCreditsTotal(email: str) -> int:
-    return getCreditsLeft(email) + getCreditsUsed(email)
+def get_credits_total(email: str) -> int:
+    return get_credits_left(email) + get_credits_used(email)
 
 
-
+def test_db():
+    # Test add_credits
+    add_credits("olivier.motelet@gmail.com", 1.5, 2)
+    logger.info(">>>> test DB : oli credit left : " + str(get_credits_left("olivier.motelet@gmail.com")))
+    
+    # Test use_credits
+    logger.info(">>>> test DB : oli credit left after use : " + str(get_credits_left("olivier.motelet@gmail.com")))
+    logger.info(">>>> test DB : oli credit used : " + str(get_credits_used("olivier.motelet@gmail.com")))
+    
+    # Test get_credits_total
+    logger.info(">>>> test DB : oli credit total : " + str(get_credits_total("olivier.motelet@gmail.com")))
+    
+    # Test get_usage_history
+    logger.info(">>>> test DB : oli usage history : " + str(get_usage_history("olivier.motelet@gmail.com")))
+    
+    # Test get_foundings_history
+    logger.info(">>>> test DB : oli foundings history : " + str(get_foundings_history("olivier.motelet@gmail.com")))
+    
+    # Test get_usage_total
+    logger.info(">>>> test DB : oli usage total : " + str(get_usage_total("olivier.motelet@gmail.com")))
+    
+    # Test get_foundings_total
+    logger.info(">>>> test DB : oli foundings total : " + str(get_foundings_total("olivier.motelet@gmail.com")))
+      
 
 # -----------------------------------------------------------------------------
 # LLM Functions
@@ -704,6 +737,10 @@ def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str)
          calls generate_design_transcript(), and stores in the cache.
       4. Returns the final transcript in the requested language.
     """
+    ## test dynamodb access
+    use_credits("olivier.motelet@gmail.com", 1, "test-url")
+    test_db()
+    
     # Clean the URL by removing query parameters
     logger.info(f"Request to get_design_transcript: url={url}, etag={etag}, lang={lang}")
     if "?" in url:
@@ -739,7 +776,7 @@ def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str)
 def get_design_transcript_with_image(id, img) :
     
     info= pop_cached_url_info(id)
-    print( f"retrived info = {info}" )
+    logger.info( f"retrived info = {info}" )
     if (info is None):
         return "Internal Error - try again "
     
