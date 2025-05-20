@@ -75,7 +75,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: design_transcript.lambda_handler_transcript
+      Handler: lambdas.handlers.lambda_handler_transcript
       Runtime: python3.11
       Architectures: [x86_64]
       Environment:
@@ -109,7 +109,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: design_transcript.lambda_handler_image_transcript
+      Handler: lambdas.handlers.lambda_handler_image_transcript
       Runtime: python3.11
       Architectures: [x86_64]
       Environment:
@@ -141,7 +141,7 @@ Resources:
     Condition: IsDevelopment
     Properties:
       CodeUri: .
-      Handler: design_transcript.lambda_handler_cache_get
+      Handler: lambdas.handlers.lambda_handler_cache_get
       Runtime: python3.11
       Architectures: [x86_64]
       Environment:
@@ -165,7 +165,7 @@ Resources:
     Condition: IsDevelopment
     Properties:
       CodeUri: .
-      Handler: design_transcript.lambda_handler_cache_clear
+      Handler: lambdas.handlers.lambda_handler_cache_clear
       Runtime: python3.11
       Architectures: [x86_64]
       Environment:

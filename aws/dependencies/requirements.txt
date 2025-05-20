@@ -1,4 +1,5 @@
 # Dépendances essentielles avec versions spécifiques pour réduire la taille
+requests==2.31.0
 redis==5.2.1
 openai==1.59.8
 pydantic==2.10.5
