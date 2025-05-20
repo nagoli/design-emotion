@@ -17,6 +17,7 @@ TECH_CONFIG = {
 BUSINESS_CONFIG = {
     "id_cache_limit": 60,
     "transcript_cache_limit": 60*60*24*15,
+    "email_validation_limit": 60*60*24
 }
  
 LLM_VARIABLES = {
@@ -100,7 +101,7 @@ def resolve_llm_config(variables, config):
             resolved_block[role] = resolve_entry(ref)
         resolved[block_name] = resolved_block
     
-    logger.info("LLM config resolved: %s", resolved)
+    logger.info("LLM config resolved")
     return resolved
 
 # Utilisation

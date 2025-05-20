@@ -170,3 +170,32 @@ def checkIP(ip: str) -> bool:
         # Nouvelle IP, on l'ajoute avec TTL=60s
         redis_client.set(cache_key, "1", ex=60)
         return True
+
+
+""""
+Email registration validation key cache
+"""
+
+def create_email_validation_key( email: str, key:str, tool:str) -> str:
+    logger.info("Storing validation_key info in cache.")
+    #generate unique id
+    url_md5 = hashlib.md5(url.encode()).hexdigest()
+    short_id = url_md5 #[:8]
+    cache_key = f"email_validation_key:{short_id}"
+    cache_value = {
+        "email": email,
+        "key":key,
+        "tool": tool,
+    }
+    redis_client.set(cache_key, json.dumps(cache_value), ex=BUSINESS_CONFIG['email_validation_limit'])
+    return short_id
+
+def get_email_validation_key(validation_key: str) -> str:
+    logger.info("Popping url info from cache.")
+    cache_key = f"email_validation_key:{validation_key}"
+    cache_value = redis_client.get(cache_key)
+    if cache_value is None:
+        return None
+    # on efface pas le cache pour si la validation est utilisé plusieurs fois ainsi on ne renvoie pas une erreur pour rien - le cache s’efface après 24h
+    #redis_client.delete(cache_key)
+    return json.loads(cache_value)

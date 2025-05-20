@@ -4,7 +4,9 @@ Handlers Lambda pour l'application.
 
 import json
 
-from services.cache import redis_client, checkIP
+from services.dynamodb import is_valid_front_key
+from services.mail import send_registration_mail
+from services.cache import redis_client, checkIP, create_email_validation_key, get_email_validation_key
 from services.transcript import get_design_transcript, get_design_transcript_with_image
 
 from utils.helpers import logger
@@ -23,6 +25,8 @@ def lambda_handler_transcript(event, context):
     Lambda entry point.  
     Expects JSON input (e.g. via API Gateway) with the following keys:
     {
+        "email": <string>,
+        "key": <string>,
         "url": <string>,
         "etag": <string, optional>,
         "lang": <string, optional>
@@ -41,15 +45,26 @@ def lambda_handler_transcript(event, context):
         if body is None:
             # If triggered by GET with queryStringParameters
             params = event.get("queryStringParameters", {})
+            email = params["email"]
+            key = params["key"]
             url = params["url"]
             etag = params.get("etag", None)
             lang = params.get("lang", "en")
         else:
             # If triggered by POST with JSON body
             data = json.loads(body)
+            email = data["email"]
+            key = data["key"]
             url = data["url"]
             etag = data.get("etag")
             lang = data.get("lang", "en")
+
+        if not is_valid_front_key(email, key):
+            return {
+                'statusCode': 401,
+                'headers': get_cors_headers(),
+                'body': json.dumps({'error': 'Invalid front key'})
+            }
 
         known, param = get_design_transcript(url, etag, lang)
         if known : 
@@ -77,6 +92,8 @@ def lambda_handler_image_transcript(event, context):
     Lambda entry point for direct image processing.
     Expects JSON input with the following keys:
     {
+        "email": <string>,
+        "key": <string>,
         "id": <string>,
         "image": <string, base64 encoded image>,
         "lang": <string, optional>
@@ -108,11 +125,15 @@ def lambda_handler_image_transcript(event, context):
         if body is None:
             # If triggered by GET with queryStringParameters
             params = event.get("queryStringParameters", {})
+            email = params["email"]
+            key = params["key"]
             id = params["id"]
             image = params["image"]
         else:
             # If triggered by POST with JSON body
             params = json.loads(body)
+            email = params["email"]
+            key = params["key"]
             id = params["id"]
             image = params["image"]
         
@@ -132,6 +153,13 @@ def lambda_handler_image_transcript(event, context):
                 'headers': get_cors_headers(),
                 'body': json.dumps({'error': 'Missing required parameter: image'})
             }
+
+        if not is_valid_front_key(email, key):
+                    return {
+                        'statusCode': 401,
+                        'headers': get_cors_headers(),
+                        'body': json.dumps({'error': 'Invalid front key'})
+                    }
 
         # Decode base64 image
         import base64
@@ -162,6 +190,87 @@ def lambda_handler_image_transcript(event, context):
             'headers': get_cors_headers(),
             'body': json.dumps({'error': f'Internal server error: {str(e)}'})
         }
+
+
+def lambda_handler_register_mail(event, context):
+    """
+    Lambda entry point for email registration.
+    Expects JSON input with the following keys:
+    {
+        "email": <string>,
+        "key": <string>,
+        "tool": <string>
+    }
+    """
+    try:
+        body = event.get("body")
+        if body is None:
+            # If triggered by GET with queryStringParameters
+            params = event.get("queryStringParameters", {})
+            email = params["email"]
+            key = params["key"]
+            tool = params.get("tool", "front")
+        else:
+            # If triggered by POST with JSON body
+            data = json.loads(body)
+            email = data["email"]
+            key = data["key"]
+            tool = data.get("tool", "front")
+
+        validation_key = create_email_validation_key(email, key, tool)
+        send_email(email, validation_key)
+
+        return {
+            'statusCode': 200,
+            'headers': get_cors_headers(),
+            'body': json.dumps({'info': 'registration mail has been sent'})
+        }
+        
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': get_cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
+ 
+
+def lambda_handler_validate_mail(event, context):
+    """
+    Lambda entry point for email validation.
+    Expects JSON input with the following keys:
+    {
+        "validation_key": <string>
+    }
+    """
+    try:
+        body = event.get("body")
+        if body is None:
+            # If triggered by GET with queryStringParameters
+            params = event.get("queryStringParameters", {})
+            validation_key = params["validation_key"]
+        else:
+            # If triggered by POST with JSON body
+            data = json.loads(body)
+            validation_key = data["validation_key"]
+
+        email_infos = get_email_validation_key(validation_key)
+        if email_infos : 
+            ## gere la reponse : valide l’email si ok 
+            # sinon envoi une erreur
+
+            return {
+                'statusCode': 200,
+                'headers': get_cors_headers(),
+                'body': json.dumps({'info': 'registration mail has been sent'})
+            }
+        
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': get_cors_headers(),
+            'body': json.dumps({'error': str(e)})
+        }
+
 
 def lambda_handler_cache_get(event, context):
     """Affiche le contenu complet du cache Redis"""
