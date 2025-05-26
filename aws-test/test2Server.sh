@@ -72,10 +72,24 @@ force-transcript)
       -H "Content-Type: application/json" \
       -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
     ;;
-    
+
+  send-validation-mail)
+    echo "Exécution de la commande send-validation-mail..."
+    curl -X POST $uri/send-validation-mail \
+      -H "Content-Type: application/json" \
+      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "tool":"cmd_tester"}'
+    ;;
+  
+  register-key-for-email)
+      echo "Exécution de la commande register-key-for-email..."
+      curl -X POST $uri/register-key-for-email \
+        -H "Content-Type: application/json" \
+        -d '{"validation_key": "'$2'"}'
+    ;;
+  
   *)
     echo "Paramètre non reconnu : $1"
-    echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key|force-transcript}"
+    echo "Usage: $0 {transcript|transcript-image|cache|clear|clear-key|force-transcript|send-validation-mail|register-key-for-email}"
     exit 1
     ;;
 esac

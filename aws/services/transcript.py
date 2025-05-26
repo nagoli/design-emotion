@@ -13,7 +13,7 @@ from services.llm import generate_design_transcript, _translate_with_chatgpt
 from utils.helpers import logger
 
 
-def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str):
+def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str = "en", ) -> (bool, str):
     """
     Main orchestration function:
       1. Cleans the URL of query parameters.
@@ -23,8 +23,11 @@ def get_design_transcript(url: str, etag: str,  lang: str = "en") -> (bool, str)
       4. Returns the final transcript in the requested language.
     """
     ## test dynamodb access
-    use_credits("olivier.motelet@gmail.com", 1, "test-url")
+    use_credits(email, 1, url)
+    
     test_db()
+    
+    
     
     # Clean the URL by removing query parameters
     logger.info(f"Request to get_design_transcript: url={url}, etag={etag}, lang={lang}")

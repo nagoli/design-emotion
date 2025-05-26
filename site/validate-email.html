@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Validation d'email…</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    .loading { color: #888; }
+    .success { color: green; }
+    .error   { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Validation d’email</h1>
+  <p id="status" class="loading">En cours de validation…</p>
+
+  <script>
+    (function() {
+      // 1. Récupère la clé dans l'URL
+      const params = new URLSearchParams(window.location.search);
+      const validationKey = params.get('validation_key');
+      if (!validationKey) {
+        document.getElementById('status')
+          .textContent = "Clé de validation manquante dans l’URL."
+          .className = 'error';
+        return;
+      }
+
+      // 2. Choisit l'URI selon l'environnement
+      const hostname = window.location.hostname;
+      let uri =  'http://localhost:3000'
+      //uri = 'https://nqeyedpmyc.execute-api.eu-west-3.amazonaws.com/dev';
+
+      // 3. Appelle votre fonction Lambda
+      fetch(`${uri}/validate_email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ validation_key: validationKey })
+      })
+      .then(async res => {
+        if (!res.ok) throw new Error(`Statut HTTP ${res.status}`);
+        const data = await res.json();
+        // 4. Affiche le résultat
+        (document.getElementById('status')
+          .textContent = data.message || 'Validation réussie !')
+          .className = 'success';
+      })
+      .catch(err => {
+        console.error(err);
+        (document.getElementById('status')
+          .textContent = "Une erreur est survenue lors de la validation.")
+          .className = 'error';
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -7,9 +7,7 @@ from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
 from utils.config import TECH_CONFIG
-from utils.helpers import get_current_date, logger
-
-
+from utils.helpers import get_current_date, logger, NotEnoughCreditException
 
 # -----------------------------------------------------------------------------
 # DynamoDB Functions 
@@ -65,7 +63,7 @@ def is_valid_front_key(email: str, key: str) -> bool:
     
     return key in response['Item']['frontKeys']
     
-def add_front_key(email: str, key: str) -> None:
+def add_front_key(email: str, key: str, tool: str) -> None:
     table = get_dynamodb_id_table()
     
     # First check if the email exists
@@ -78,9 +76,10 @@ def add_front_key(email: str, key: str) -> None:
         table.put_item(
             Item={
                 'email': email,
-                'credits-left': 1,
+                'credits-left': 2,
                 'credits-used': 0,
                 'frontKeys': [key],
+                'tools': [(key,tool)],
                 'usage-total': 0,
                 'usage-history': [],
                 'foundings-total': 0.0,
@@ -133,6 +132,7 @@ def add_credits(email: str, payed_amount: float, credits: int) -> None:
                 'credits-left': credits,
                 'credits-used': 0,
                 'frontKeys': [],
+                'tools': [],
                 'usage-total': 0,
                 'usage-history': [],
                 'foundings-total': payed_amount,
@@ -162,7 +162,7 @@ def add_credits(email: str, payed_amount: float, credits: int) -> None:
             }
         )
 
-def use_credits(email: str, credit_cost: int, url: str = "test-url") -> None:
+def use_credits(email: str, credits_cost: int, url: str = "test-url") -> None:
     table = get_dynamodb_id_table()
     
     response = table.get_item(
@@ -174,13 +174,13 @@ def use_credits(email: str, credit_cost: int, url: str = "test-url") -> None:
         credits_left = item.get('credits-left', 0)
         
         # Check if user has enough credits
-        if credits_left >= credit_cost:
-            credits_left -= credit_cost
-            credits_used = item.get('credits-used', 0) + credit_cost
+        if credits_left >= credits_cost:
+            credits_left -= credits_cost
+            credits_used = item.get('credits-used', 0) + credits_cost
             usage_total = item.get('usage-total', 0) + 1
             usage_history = item.get('usage-history', [])
             date = get_current_date()
-            usage_history.append((date, url, str(credit_cost)))
+            usage_history.append((date, url, str(credits_cost)))
             
             table.update_item(
                 Key={'email': email},
@@ -198,6 +198,9 @@ def use_credits(email: str, credit_cost: int, url: str = "test-url") -> None:
                     ':usage_history': usage_history
                 }
             )
+        else : 
+            raise NotEnoughCreditException(credits_cost, credits_left)
+            
 
 def get_usage_history(email: str) -> list:
     table = get_dynamodb_id_table()

@@ -187,6 +187,74 @@ Resources:
             Path: /cache/clear
             Method: delete
 
+  SendValidationMailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambdas.handlers.lambda_handler_send_validation_mail
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
+      Description: Validate an email key
+      PackageType: Zip
+      Architectures:
+        - x86_64
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [ secretsmanager:GetSecretValue ]
+              Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
+            - Effect: Allow
+              Action: [ elasticache:DescribeCacheClusters, elasticache:DescribeReplicationGroups ]
+              Resource: "*"
+      Events:
+        SendValidationMailApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DesignEmotionApi
+            Path: /send-validation-mail
+            Method: post
+
+  RegisterKeyForEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambdas.handlers.lambda_handler_register_key_for_email
+      Runtime: python3.11
+      Architectures: [x86_64]
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          REDIS_HOST: !Ref RedisHost
+          REDIS_PORT: !Ref RedisPort
+          SECRET_NAME: !Ref SecretName
+          AWS_REGION_DEPLOY: !Ref AWSRegion
+      Description: Check an email and send validation email
+      PackageType: Zip
+      Architectures:
+        - x86_64
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [ secretsmanager:GetSecretValue ]
+              Resource: arn:aws:secretsmanager:eu-west-3:242201281082:secret:openai-key-6Bj9hR
+            - Effect: Allow
+              Action: [ elasticache:DescribeCacheClusters, elasticache:DescribeReplicationGroups ]
+              Resource: "*"
+      Events:
+        RegisterKeyForEmailApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DesignEmotionApi
+            Path: /register-key-for-email
+            Method: post
+
   DesignEmotionApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -218,3 +286,9 @@ Outputs:
   DesignTranscriptWithImageFunctionArn:
     Description: "ARN of DesignTranscriptWithImageFunction"
     Value: !GetAtt DesignTranscriptWithImageFunction.Arn
+  SendValidationMailFunctionArn:
+    Description: "ARN of SendValidationMailFunction"
+    Value: !GetAtt SendValidationMailFunction.Arn
+  RegisterKeyForEmailFunctionArn:
+    Description: "ARN of RegisterKeyForEmailFunction"
+    Value: !GetAtt RegisterKeyForEmailFunction.Arn

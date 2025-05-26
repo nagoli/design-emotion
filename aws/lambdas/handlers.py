@@ -4,12 +4,14 @@ Handlers Lambda pour l'application.
 
 import json
 
-from services.dynamodb import is_valid_front_key
-from services.mail import send_registration_mail
+from aws.utils.exceptions import BusinessException, NotEnoughCreditException
+from services.dynamodb import is_valid_front_key, add_front_key
+from services.mails import send_registration_mail
 from services.cache import redis_client, checkIP, create_email_validation_key, get_email_validation_key
 from services.transcript import get_design_transcript, get_design_transcript_with_image
 
 from utils.helpers import logger
+from utils.exceptions import BusinessException, BUSINESS_EXCEPTION_STATUS_CODE, InvalidFrontKeyException
 
 
 def get_cors_headers():
@@ -60,13 +62,9 @@ def lambda_handler_transcript(event, context):
             lang = data.get("lang", "en")
 
         if not is_valid_front_key(email, key):
-            return {
-                'statusCode': 401,
-                'headers': get_cors_headers(),
-                'body': json.dumps({'error': 'Invalid front key'})
-            }
+            raise InvalidFrontKeyException(email)
 
-        known, param = get_design_transcript(url, etag, lang)
+        known, param = get_design_transcript(email, key, url, etag, lang)
         if known : 
             return {
                 "statusCode": 200,
@@ -74,12 +72,19 @@ def lambda_handler_transcript(event, context):
                 "body": json.dumps({"known": 1, "transcript": param}, ensure_ascii=False)
             }
         return {
-                "statusCode": 200,
+                "statusCode": 201,
                 'headers': get_cors_headers(),
                 "body": json.dumps({"known": 0, "id": param}, ensure_ascii=False)
             }
 
     except Exception as e:
+        if e is BusinessException :
+            return {
+            "statusCode": BUSINESS_EXCEPTION_STATUS_CODE,
+            'headers': get_cors_headers(),
+            "body": json.dumps({"message" : e.get_description(lang)
+            })
+        }
         logger.exception("Error in lambda_handler")
         return {
             "statusCode": 500,
@@ -155,11 +160,7 @@ def lambda_handler_image_transcript(event, context):
             }
 
         if not is_valid_front_key(email, key):
-                    return {
-                        'statusCode': 401,
-                        'headers': get_cors_headers(),
-                        'body': json.dumps({'error': 'Invalid front key'})
-                    }
+            raise 
 
         # Decode base64 image
         import base64
@@ -192,7 +193,7 @@ def lambda_handler_image_transcript(event, context):
         }
 
 
-def lambda_handler_register_mail(event, context):
+def lambda_handler_send_validation_mail(event, context):
     """
     Lambda entry point for email registration.
     Expects JSON input with the following keys:
@@ -209,16 +210,17 @@ def lambda_handler_register_mail(event, context):
             params = event.get("queryStringParameters", {})
             email = params["email"]
             key = params["key"]
-            tool = params.get("tool", "front")
+            tool = params.get("tool")
         else:
             # If triggered by POST with JSON body
             data = json.loads(body)
             email = data["email"]
             key = data["key"]
-            tool = data.get("tool", "front")
+            tool = data.get("tool")
 
         validation_key = create_email_validation_key(email, key, tool)
-        send_email(email, validation_key)
+        print("#### validation_key", validation_key)
+        #send_registration_mail(email, validation_key)
 
         return {
             'statusCode': 200,
@@ -234,7 +236,7 @@ def lambda_handler_register_mail(event, context):
         }
  
 
-def lambda_handler_validate_mail(event, context):
+def lambda_handler_register_key_for_email(event, context):
     """
     Lambda entry point for email validation.
     Expects JSON input with the following keys:
@@ -257,11 +259,14 @@ def lambda_handler_validate_mail(event, context):
         if email_infos : 
             ## gere la reponse : valide l’email si ok 
             # sinon envoi une erreur
-
+            key = email_infos.key
+            email = email_infos.email
+            tool = email_infos.tool
+            add_front_key(email, key, tool)
             return {
                 'statusCode': 200,
                 'headers': get_cors_headers(),
-                'body': json.dumps({'info': 'registration mail has been sent'})
+                'body': json.dumps({'info': f"email {email} has been registered"})
             }
         
     except Exception as e:

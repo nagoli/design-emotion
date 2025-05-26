@@ -5,6 +5,7 @@ Fonctions de gestion du cache Redis.
 import redis
 import json
 import hashlib
+import uuid
 
 from utils.config import TECH_CONFIG, BUSINESS_CONFIG
 from utils.auth import _get_keys
@@ -178,9 +179,8 @@ Email registration validation key cache
 
 def create_email_validation_key( email: str, key:str, tool:str) -> str:
     logger.info("Storing validation_key info in cache.")
-    #generate unique id
-    url_md5 = hashlib.md5(url.encode()).hexdigest()
-    short_id = url_md5 #[:8]
+    #generate unique id randomly
+    short_id = str(uuid.uuid4())
     cache_key = f"email_validation_key:{short_id}"
     cache_value = {
         "email": email,
