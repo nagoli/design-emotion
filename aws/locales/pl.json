@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "Brak opisu dla wyjątku biznesowego",
+  "not_enough_credit": "Za mało kredytów: potrzeba {needed}, ale pozostało tylko {left}",
+  "invalid_front_key": "Twój adres e-mail {email} nie został potwierdzony i powiązany z narzędziem, którego używasz",
+  "invalid_email_key": "Twój klucz walidacyjny jest nieaktualny. Zweryfikuj swój adres e-mail ponownie za pomocą rozszerzenia przeglądarki",
+  "too_many_requests": "Wykonałeś zbyt wiele żądań w krótkim czasie. Poczekaj chwilę i spróbuj ponownie"
+}

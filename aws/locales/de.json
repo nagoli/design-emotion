@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "Keine Beschreibung für Geschäftsausnahme",
+  "not_enough_credit": "Nicht genug Guthaben: {needed} benötigt, aber nur {left} übrig",
+  "invalid_front_key": "Ihre E-Mail {email} wurde nicht bestätigt und mit dem Tool, das Sie verwenden, verknüpft",
+  "invalid_email_key": "Ihr Validierungsschlüssel ist veraltet. Bitte validieren Sie Ihre E-Mail erneut mit der Browser-Erweiterung",
+  "too_many_requests": "Sie haben in kurzer Zeit zu viele Anfragen gestellt. Bitte warten Sie einen Moment und versuchen Sie es dann erneut"
+}

@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "没有业务异常的描述",
+  "not_enough_credit": "积分不足：需要 {needed} 积分，但只剩余 {left} 积分",
+  "invalid_front_key": "您的电子邮件 {email} 尚未确认且未与您使用的工具关联",
+  "invalid_email_key": "您的验证密钥已过期。请使用浏览器扩展程序重新验证您的电子邮件",
+  "too_many_requests": "您在短时间内发送了太多请求。请稍等片刻，然后重试"
+}

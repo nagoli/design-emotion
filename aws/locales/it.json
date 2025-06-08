@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "Nessuna descrizione per l'eccezione aziendale",
+  "not_enough_credit": "Crediti insufficienti: ne servono {needed} ma ne restano solo {left}",
+  "invalid_front_key": "La tua email {email} non è stata confermata e associata allo strumento che stai utilizzando",
+  "invalid_email_key": "La tua chiave di convalida è obsoleta. Convalida nuovamente la tua email con l'estensione del browser",
+  "too_many_requests": "Hai effettuato troppe richieste in poco tempo. Attendi un momento e riprova"
+}

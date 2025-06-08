@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "Geen beschrijving voor bedrijfsuitzondering",
+  "not_enough_credit": "Onvoldoende credits: {needed} nodig maar slechts {left} over",
+  "invalid_front_key": "Uw e-mail {email} is niet bevestigd en gekoppeld aan het hulpmiddel dat u gebruikt",
+  "invalid_email_key": "Uw validatiesleutel is verouderd. Valideer uw e-mail opnieuw met de browserextensie",
+  "too_many_requests": "U hebt in korte tijd te veel verzoeken gedaan. Wacht een moment en probeer het opnieuw"
+}

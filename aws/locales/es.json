@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "No hay descripción para la excepción de negocio",
+  "not_enough_credit": "Créditos insuficientes: se necesitan {needed} pero solo quedan {left}",
+  "invalid_front_key": "Su correo electrónico {email} no ha sido confirmado ni asociado con la herramienta que está utilizando",
+  "invalid_email_key": "Su clave de validación está obsoleta. Valide su correo electrónico nuevamente con la extensión del navegador",
+  "too_many_requests": "Ha realizado demasiadas solicitudes en poco tiempo. Espere un momento e inténtelo de nuevo"
+}

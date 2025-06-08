@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "No description for business exception",
+  "not_enough_credit": "Not enough credits: {needed} needed but {left} left",
+  "invalid_front_key": "Your email {email} has not been confirmed and associated with the tool you are using",
+  "invalid_email_key": "Your validation key is outdated. Please validate your email again with the browser extension",
+  "too_many_requests": "You made too many requests in a short time. Please wait for a while then try again"
+}

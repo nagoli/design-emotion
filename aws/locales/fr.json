@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "Aucune description pour cette exception métier",
+  "not_enough_credit": "Crédits insuffisants : {needed} nécessaires mais seulement {left} disponibles",
+  "invalid_front_key": "Votre email {email} n'a pas été confirmé et associé à l'outil que vous utilisez",
+  "invalid_email_key": "Votre clé de validation a expiré. Veuillez valider à nouveau votre email avec l'extension de navigateur",
+  "too_many_requests": "Vous avez fait trop de requêtes en peu de temps. Veuillez patienter un moment puis réessayer"
+}

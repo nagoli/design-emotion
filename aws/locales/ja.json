@@ -1,0 +1,7 @@
+{
+  "business_exception_generic": "ビジネス例外の説明がありません",
+  "not_enough_credit": "クレジット不足：{needed}必要ですが、残り{left}しかありません",
+  "invalid_front_key": "あなたのメール{email}は確認されておらず、使用しているツールに関連付けられていません",
+  "invalid_email_key": "あなたの検証キーは期限切れです。ブラウザ拡張機能を使用して、もう一度メールを検証してください",
+  "too_many_requests": "短時間に多くのリクエストを行いました。しばらく待ってから再度お試しください"
+}
