@@ -4,14 +4,14 @@ Handlers Lambda pour l'application.
 
 import json
 
-from aws.utils.exceptions import BusinessException, NotEnoughCreditException
 from services.dynamodb import is_valid_front_key, add_front_key
 from services.mails import send_registration_mail
-from services.cache import redis_client, checkIP, create_email_validation_key, get_email_validation_key
+from services.cache import redis_client, shouldBlockIP, create_email_validation_key, get_email_validation_key
 from services.transcript import get_design_transcript, get_design_transcript_with_image
 
 from utils.helpers import logger
-from utils.exceptions import BusinessException, BUSINESS_EXCEPTION_STATUS_CODE, InvalidFrontKeyException
+from utils.exceptions import BusinessException, BUSINESS_EXCEPTION_STATUS_CODE, InvalidFrontKeyException, TooManyRequestException, InvalidEmailValidationKeyException
+import traceback
 
 
 def get_cors_headers():
@@ -21,6 +21,20 @@ def get_cors_headers():
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
     }
+
+def manage_exception(e,lang):
+    if isinstance(e, BusinessException):
+        return {
+            'statusCode': e.status_code,
+            'headers': get_cors_headers(),
+            'body': json.dumps({'error': e.type, 'description': e.get_description(lang)})
+        }
+    return {
+        'statusCode': 500,
+        'headers': get_cors_headers(),
+        'body': json.dumps({'error': e.args[0], 'traceback': "".join(traceback.format_exception(type(e), e, e.__traceback__)) })
+    }
+
 
 def lambda_handler_transcript(event, context):
     """
@@ -78,19 +92,7 @@ def lambda_handler_transcript(event, context):
             }
 
     except Exception as e:
-        if e is BusinessException :
-            return {
-            "statusCode": BUSINESS_EXCEPTION_STATUS_CODE,
-            'headers': get_cors_headers(),
-            "body": json.dumps({"message" : e.get_description(lang)
-            })
-        }
-        logger.exception("Error in lambda_handler")
-        return {
-            "statusCode": 500,
-            'headers': get_cors_headers(),
-            "body": json.dumps({"error": str(e)})
-        }
+       return manage_exception(e, lang)
 
 def lambda_handler_image_transcript(event, context):
     """
@@ -116,14 +118,8 @@ def lambda_handler_image_transcript(event, context):
     ip_address = headers.get('X-Forwarded-For')
     if ip_address:
         ip_address = ip_address.split(',')[0].strip()
-        if not checkIP(ip_address):
-            return {
-                'statusCode': 429,  # Too Many Requests
-                'headers': get_cors_headers(),
-                'body': json.dumps({
-                    'error': 'Rate limit exceeded. Please wait before making another request.'
-                })
-            }
+        if shouldBlockIP(ip_address):
+            raise TooManyRequestException(ip_address)
 
     try:
         body = event.get("body")
@@ -160,7 +156,7 @@ def lambda_handler_image_transcript(event, context):
             }
 
         if not is_valid_front_key(email, key):
-            raise 
+            raise InvalidFrontKeyException(email)
 
         # Decode base64 image
         import base64
@@ -185,12 +181,7 @@ def lambda_handler_image_transcript(event, context):
         }
 
     except Exception as e:
-        logger.error(f'Error processing image: {str(e)}', exc_info=True)
-        return {
-            'statusCode': 500,  
-            'headers': get_cors_headers(),
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
-        }
+       return manage_exception(e, lang)
 
 
 def lambda_handler_send_validation_mail(event, context):
@@ -200,7 +191,8 @@ def lambda_handler_send_validation_mail(event, context):
     {
         "email": <string>,
         "key": <string>,
-        "tool": <string>
+        "tool": <string>, 
+        "lang": <string, optional>
     }
     """
     try:
@@ -211,12 +203,14 @@ def lambda_handler_send_validation_mail(event, context):
             email = params["email"]
             key = params["key"]
             tool = params.get("tool")
+            lang = params.get("lang", "en")
         else:
             # If triggered by POST with JSON body
             data = json.loads(body)
             email = data["email"]
             key = data["key"]
             tool = data.get("tool")
+            lang = data.get("lang", "en")
 
         validation_key = create_email_validation_key(email, key, tool)
         print("#### validation_key", validation_key)
@@ -229,11 +223,7 @@ def lambda_handler_send_validation_mail(event, context):
         }
         
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': get_cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        return manage_exception(e, lang)
  
 
 def lambda_handler_register_key_for_email(event, context):
@@ -241,7 +231,8 @@ def lambda_handler_register_key_for_email(event, context):
     Lambda entry point for email validation.
     Expects JSON input with the following keys:
     {
-        "validation_key": <string>
+        "validation_key": <string>,
+        "lang": <string, optional>
     }
     """
     try:
@@ -250,31 +241,31 @@ def lambda_handler_register_key_for_email(event, context):
             # If triggered by GET with queryStringParameters
             params = event.get("queryStringParameters", {})
             validation_key = params["validation_key"]
+            lang = params.get("lang", "en")
         else:
             # If triggered by POST with JSON body
             data = json.loads(body)
             validation_key = data["validation_key"]
+            lang = data.get("lang", "en")
 
         email_infos = get_email_validation_key(validation_key)
         if email_infos : 
             ## gere la reponse : valide l’email si ok 
             # sinon envoi une erreur
-            key = email_infos.key
-            email = email_infos.email
-            tool = email_infos.tool
+            print(">>>>>>email_infos", email_infos)
+            key = email_infos["key"]
+            email = email_infos["email"]
+            tool = email_infos["tool"]
             add_front_key(email, key, tool)
             return {
                 'statusCode': 200,
                 'headers': get_cors_headers(),
                 'body': json.dumps({'info': f"email {email} has been registered"})
             }
-        
+        else : 
+            raise InvalidEmailValidationKeyException(validation_key)
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': get_cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        return manage_exception(e, lang)
 
 
 def lambda_handler_cache_get(event, context):
@@ -293,11 +284,7 @@ def lambda_handler_cache_get(event, context):
         }
         
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': get_cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        return manage_exception(e, lang)
  
 
 
@@ -329,8 +316,4 @@ def lambda_handler_cache_clear(event, context):
             }, ensure_ascii=False)
         }
     except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': get_cors_headers(),
-            'body': json.dumps({'error': str(e)})
-        }
+        return manage_exception(e, lang)

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Emotion - Coming Soon</title>
+    <meta name="description" content="Something amazing is coming. Stay tuned for our revolutionary product.">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #111;
+            --text-color: #f8f8f8;
+            --accent-color: #e74c3c;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: pulse 3s infinite alternate;
+        }
+        
+        p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .language-switcher {
+            margin-top: 3rem;
+        }
+        
+        .language-btn {
+            background: transparent;
+            border: 1px solid var(--text-color);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .language-btn:hover, .language-btn.active {
+            background-color: var(--text-color);
+            color: var(--background-color);
+        }
+        
+        .language-btn:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        
+        .pulse {
+            margin-top: 4rem;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 0 30px rgba(52, 152, 219, 0.5);
+            animation: pulse 2s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            p {
+                font-size: 1.2rem;
+            }
+            
+            .language-btn {
+                margin: 0.5rem;
+            }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .countdown {
+            font-size: 2rem;
+            margin: 2rem 0;
+            letter-spacing: 2px;
+        }
+        
+        footer {
+            margin-top: 4rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" role="main">
+        <div id="content-section" class="content-section">
+            <h1 id="title"></h1>
+            <p id="description"></p>
+            <div id="countdown" class="countdown" aria-live="polite"></div>
+        </div>
+
+        <div class="language-switcher" role="navigation" aria-label="Language selection">
+            <button class="language-btn active" data-lang="en" aria-pressed="true">English</button>
+            <button class="language-btn" data-lang="fr" aria-pressed="false">Français</button>
+            <button class="language-btn" data-lang="es" aria-pressed="false">Español</button>
+            <button class="language-btn" data-lang="de" aria-pressed="false">Deutsch</button>
+            <button class="language-btn" data-lang="ja" aria-pressed="false">日本語</button>
+            <button class="language-btn" data-lang="pt" aria-pressed="false">Português</button>
+            <button class="language-btn" data-lang="ru" aria-pressed="false">Русский</button>
+            <button class="language-btn" data-lang="it" aria-pressed="false">Italiano</button>
+            <button class="language-btn" data-lang="nl" aria-pressed="false">Nederlands</button>
+            <button class="language-btn" data-lang="pl" aria-pressed="false">Polski</button>
+        </div>
+        
+        <div class="pulse" aria-hidden="true"></div>
+        
+        <footer>
+            <p>&copy; 2025 Design Emotion. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Simple language switcher
+        // Éléments DOM principaux
+        const languageBtns = document.querySelectorAll('.language-btn');
+        const titleEl = document.getElementById('title');
+        const descriptionEl = document.getElementById('description');
+        const countdownEl = document.getElementById('countdown');
+        
+        // Contenu pour chaque langue intégré directement
+        const content = {
+          "en": {
+            "title": "Coming soon",
+            "description": "We are currently working to improve the online experience for blind people. Stay tuned.",
+            "countdown": "Launching summer 2025"
+          },
+          "fr": {
+            "title": "Bientôt",
+            "description": "Nous travaillons actuellement à l’amélioration de l’expérience des personnes aveugles sur internet. Restez à l'écoute.",
+            "countdown": "Lancement été 2025"
+          },
+          "es": {
+            "title": "Pronto",
+            "description": "Actualmente estamos trabajando para mejorar la experiencia en línea de las personas ciegas. Mantente atento.",
+            "countdown": "Lanzamiento verano 2025"
+          },
+          "de": {
+            "title": "Bald verfügbar",
+            "description": "Wir arbeiten derzeit daran, das Online-Erlebnis für blinde Menschen zu verbessern. Bleiben Sie dran.",
+            "countdown": "Start Sommer 2025"
+          },
+          "ja": {
+            "title": "近日公開",
+            "description": "現在、視覚障害者のインターネット体験を向上させるために取り組んでいます。続報をお待ちください。",
+            "countdown": "2025年夏公開"
+          },
+          "pt": {
+            "title": "Em breve",
+            "description": "Estamos atualmente a trabalhar para melhorar a experiência online das pessoas cegas. Fique atento.",
+            "countdown": "Lançamento verão 2025"
+          },
+          "ru": {
+            "title": "Скоро",
+            "description": "В настоящее время мы работаем над улучшением онлайн-опыта для незрячих людей. Следите за новостями.",
+            "countdown": "Запуск летом 2025 года"
+          },
+          "it": {
+            "title": "Presto disponibile",
+            "description": "Stiamo lavorando per migliorare l’esperienza online delle persone non vedenti. Restate sintonizzati.",
+            "countdown": "Lancio estate 2025"
+          },
+          "nl": {
+            "title": "Binnenkort beschikbaar",
+            "description": "We werken momenteel aan het verbeteren van de online ervaring voor blinden. Blijf op de hoogte.",
+            "countdown": "Lancering zomer 2025"
+          },
+          "pl": {
+            "title": "Wkrótce",
+            "description": "Obecnie pracujemy nad poprawą doświadczenia osób niewidomych w internecie. Bądź na bieżąco.",
+            "countdown": "Premiera lato 2025"
+          }
+        };
+        
+        // Obtient la langue actuelle
+        function getCurrentLang() {
+            const activeBtn = document.querySelector('.language-btn.active');
+            return activeBtn ? activeBtn.getAttribute('data-lang') : 'en';
+        }
+        
+        // Met à jour le contenu en fonction de la langue sélectionnée
+        function updateContent(lang) {
+            if (!content[lang]) {
+                lang = 'en'; // Langue de secours
+            }
+            
+            const langContent = content[lang];
+            titleEl.textContent = langContent.title;
+            descriptionEl.textContent = langContent.description;
+            countdownEl.textContent = langContent.countdown;
+            
+            // Update document language
+            document.documentElement.lang = lang;
+        }
+        
+        // Ajoute les gestionnaires d'événements pour les boutons de langue
+        languageBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.getAttribute('data-lang');
+                
+                // Update button states
+                languageBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-pressed', 'false');
+                });
+                btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
+                
+                updateContent(lang);
+            });
+        });
+        
+        // Détecte la langue du navigateur
+        function detectBrowserLanguage() {
+            const browserLang = navigator.language.split('-')[0];
+            const supportedLangs = ['en', 'fr', 'es', 'de', 'zh'];
+            
+            if (supportedLangs.includes(browserLang)) {
+                const langBtn = document.querySelector(`.language-btn[data-lang="${browserLang}"]`);
+                if (langBtn) {
+                    langBtn.click();
+                }
+            }
+        }
+        
+        // Exécute au chargement de la page
+        window.addEventListener('DOMContentLoaded', () => {
+            updateContent(getCurrentLang());
+            detectBrowserLanguage();
+        });
+    </script>
+</body>
+</html>

@@ -7,7 +7,8 @@ from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
 from utils.config import TECH_CONFIG
-from utils.helpers import get_current_date, logger, NotEnoughCreditException
+from utils.helpers import get_current_date, logger
+from utils.exceptions import NotEnoughCreditException
 
 # -----------------------------------------------------------------------------
 # DynamoDB Functions 

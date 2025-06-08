@@ -15,10 +15,10 @@ TECH_CONFIG = {
 }
 
 BUSINESS_CONFIG = {
-    "id_cache_limit": 60,
+    "id_cache_limit": 240,
     "transcript_cache_limit": 60*60*24*15,
     "email_validation_limit": 60*60*24,
-    
+    "ip_limit": 120
 }
  
 LLM_VARIABLES = {

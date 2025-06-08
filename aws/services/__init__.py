@@ -17,7 +17,7 @@ from services.transcript import (
 
 from services.cache import (
     get_cached_design_transcript, create_cached_url_info,
-    pop_cached_url_info, store_cached_design_transcript,checkIP,
+    pop_cached_url_info, store_cached_design_transcript,shouldBlockIP,
     create_email_validation_key, get_email_validation_key
 )
 

@@ -154,7 +154,7 @@ def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: s
 # Rate Limiting Functions
 # -----------------------------------------------------------------------------
 
-def checkIP(ip: str) -> bool:
+def shouldBlockIP(ip: str) -> bool:
     """
     Vérifie si une IP peut faire une requête.
     - Si l'IP n'est pas dans le cache, l'ajoute avec TTL=60s et retourne True
@@ -165,12 +165,15 @@ def checkIP(ip: str) -> bool:
     # Vérifie si l'IP est dans le cache
     if redis_client.exists(cache_key):
         # IP trouvée, on étend le TTL à 120s
-        redis_client.expire(cache_key, 120)
-        return False
+        # verifie la durée restante
+        time = redis_client.ttl(cache_key)
+        redis_client.expire(cache_key, time*2)
+        if (time > 100) : 
+            return True
     else:
         # Nouvelle IP, on l'ajoute avec TTL=60s
-        redis_client.set(cache_key, "1", ex=60)
-        return True
+        redis_client.set(cache_key, "1", ex=30)
+    return False
 
 
 """"
@@ -195,7 +198,7 @@ def get_email_validation_key(validation_key: str) -> str:
     cache_key = f"email_validation_key:{validation_key}"
     cache_value = redis_client.get(cache_key)
     if cache_value is None:
-        return None
+       return None
     # on efface pas le cache pour si la validation est utilisé plusieurs fois ainsi on ne renvoie pas une erreur pour rien - le cache s’efface après 24h
     #redis_client.delete(cache_key)
     return json.loads(cache_value)
