@@ -260,10 +260,10 @@ Resources:
     Properties:
       StageName: !Ref Stage
       Cors:
-        AllowMethods: "'POST,GET,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'*'"
-        MaxAge: "'600'"
+        AllowMethods: "POST,GET,OPTIONS"
+        AllowHeaders: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+        AllowOrigin: "*"
+        MaxAge: "600"
       Auth:
         ApiKeyRequired: false
         UsagePlan:

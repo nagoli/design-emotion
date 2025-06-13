@@ -292,3 +292,30 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   return true; // Indique que sendResponse sera appelé de manière asynchrone
 });
+
+
+
+
+// Selection du lien d’évitement 
+if (False) {
+  document.addEventListener('DOMContentLoaded', () => {
+  const skipSelectors = [
+    'a[href="#main"]',
+    'a[href="#content"]',
+    'a[href="#main-content"]',
+    '#skip-link',
+    '.skipto',
+    '.govuk-skip-link',
+    '.lbh-skip-link'
+  ].join(', ');
+
+  const skipLink = document.querySelector(skipSelectors);
+  const actionBtn = document.getElementById('blind-action-btn');
+
+  if (skipLink) {
+    skipLink.after(actionBtn);
+  } else {
+    document.body.prepend(actionBtn);
+  }
+});
+};

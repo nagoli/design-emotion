@@ -15,21 +15,21 @@ case "$1" in
     echo "Exécution de la commande transcript..."
     curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
     ;;
 
   transcript-en)
     echo "Exécution de la commande transcript..."
     curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
     ;;
 
   transcript-fr2)
     echo "Exécution de la commande transcript..."
     curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "francais"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "francais"}'
     ;;
 
 
@@ -62,7 +62,7 @@ force-transcript)
     echo -e "\nRequete au cache :"
     curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "french"}'
     echo -e "\nTranscript depuis le screenshot :"
     curl -X POST $uri/image-transcript \
       -H "Content-Type: application/json" \
@@ -70,21 +70,21 @@ force-transcript)
     echo -e "\nTraduction du cache :"
     curl -X POST $uri/transcript \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash", "url": "https://respiration-yoga.fr", "etag": "3260-6212906e91527-br", "lastmodifieddate": "Sat, 25 Jan 2025 12:00:00 GMT", "lang": "english"}'
     ;;
 
   send-validation-mail)
     echo "Exécution de la commande send-validation-mail..."
     curl -X POST $uri/send-validation-mail \
       -H "Content-Type: application/json" \
-      -d '{"email":"olivier.motelet@gmail.com", "key":"123", "tool":"cmd_tester"}'
+      -d '{"email":"olivier.motelet@gmail.com", "client_key":"123", "client_type":"bash"}'
     ;;
   
   register-key-for-email)
       echo "Exécution de la commande register-key-for-email..."
       curl -X POST $uri/register-key-for-email \
         -H "Content-Type: application/json" \
-        -d '{"validation_key": "'$2'"}'
+        -d '{"validation_key": "'$2'", "client_key": "123", "email":"olivier.motelet@gmail.com", "client_type": "bash"}'
     ;;
   
   *)

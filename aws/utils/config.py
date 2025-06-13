@@ -1,5 +1,5 @@
 
-from utils.helpers import logger
+from utils.helpers import logger_tech
 
 
 TECH_CONFIG = {
@@ -102,7 +102,7 @@ def resolve_llm_config(variables, config):
             resolved_block[role] = resolve_entry(ref)
         resolved[block_name] = resolved_block
     
-    logger.info("LLM config resolved")
+    logger_tech.debug("LLM config resolved") 
     return resolved
 
 # Utilisation

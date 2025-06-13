@@ -4,6 +4,7 @@ Module d'internationalisation pour la gestion des traductions via JSON.
 import os
 import json
 from typing import Dict, Any
+from utils.helpers import logger_tech
 
 # Définition des langues supportées
 SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'de', 'ja', 'pt', 'ru', 'it', 'nl', 'pl', 'zh']
@@ -43,7 +44,7 @@ def load_translations(lang: str) -> Dict[str, str]:
         _translations[lang] = translations
         return translations
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Erreur de chargement des traductions pour {lang}: {e}")
+        logger_tech.error(f"Erreur de chargement des traductions pour {lang}: {e}")
         
         # Si la langue par défaut échoue, retourner un dict vide
         if lang != DEFAULT_LANGUAGE:
@@ -62,7 +63,7 @@ def getTranslatedText(msg_id: str, lang: str = DEFAULT_LANGUAGE, **kwargs) -> st
         try:
             return msg.format(**kwargs)
         except KeyError as e:
-            print(f"Erreur de formatage pour {msg_id} ({lang}): {e}")
+            logger_tech.error(f"Erreur de formatage pour {msg_id} ({lang}): {e}")
             return msg
     return msg
 

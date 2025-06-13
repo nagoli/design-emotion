@@ -32,7 +32,7 @@
       //uri = 'https://nqeyedpmyc.execute-api.eu-west-3.amazonaws.com/dev';
 
       // 3. Appelle votre fonction Lambda
-      fetch(`${uri}/validate_email`, {
+      fetch(`${uri}/register-key-for-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ validation_key: validationKey })

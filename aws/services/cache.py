@@ -9,7 +9,7 @@ import uuid
 
 from utils.config import TECH_CONFIG, BUSINESS_CONFIG
 from utils.auth import _get_keys
-from utils.helpers import logger
+from utils.helpers import logger_tech
 
 
 # -----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ try:
             ssl=True,
             decode_responses=True
         )
-        logger.info(f"Connected to Upstash Redis at {TECH_CONFIG['redis_host']}")
+        logger_tech.debug(f"Connected to Upstash Redis at {TECH_CONFIG['redis_host']}")
     # Configuration locale pour le développement
     else:
         redis_client = redis.Redis(
@@ -37,17 +37,17 @@ try:
             port=TECH_CONFIG['redis_port'],
             decode_responses=True
         )
-        logger.info(f"Connected to local Redis at {TECH_CONFIG['redis_host']}")
+        logger_tech.debug(f"Connected to local Redis at {TECH_CONFIG['redis_host']}")
     
     # Test de connexion
     redis_client.ping()
-    logger.info("Redis connection test successful")
+    logger_tech.debug("Redis connection test successful")
     
 except redis.ConnectionError as e:
-    logger.info(f"Failed to connect to Redis: {str(e)}")
+    logger_tech.info(f"Failed to connect to Redis: {str(e)}")
     raise e
 except Exception as e:
-    logger.info(f"Unexpected error while connecting to Redis: {str(e)}")
+    logger_tech.info(f"Unexpected error while connecting to Redis: {str(e)}")
     raise e
 
 
@@ -58,18 +58,18 @@ def get_cached_design_transcript(url: str, lang: str, etag: str) -> list ( (str,
     uses the cache and translates to the specified language if needed.
     The translations are then added to the cache.
     """
-    logger.info("Checking cached transcript...")
+    logger_tech.debug("Checking cached transcript...")
     cache_key = f"transcript_cache:{url}"
     cached_value = redis_client.get(cache_key)
 
     if not cached_value:
-        logger.info("No cache entry found.")
+        logger_tech.debug("No cache entry found.")
         return None
 
     try:
         cache_data = json.loads(cached_value)
     except json.JSONDecodeError:
-        logger.warning("Cache data is not valid JSON. Ignoring.")
+        logger_tech.debug("Cache data is not valid JSON. Ignoring.")
         return None
 
     # Check ETag match 
@@ -80,19 +80,19 @@ def get_cached_design_transcript(url: str, lang: str, etag: str) -> list ( (str,
    
     if (etag) :
         match = (etag == cached_etag) 
-        logger.info("Checking cache for ETag : " + str(match))
+        logger_tech.debug("Checking cache for ETag : " + str(match))
     else:
         match = True 
     if match:
-        logger.info("Cache is valid. Checking for language availability.")
+        logger_tech.debug("Cache is valid. Checking for language availability.")
         return transcripts
 
-    logger.info("Cache is present but does not meet criteria or no suitable transcript found.")
+    logger_tech.debug("Cache is present but does not meet criteria or no suitable transcript found.")
     return None
 
 
 def create_cached_url_info(url: str, lang: str, etag: str) -> str:
-    logger.info("Storing url info in cache.")
+    logger_tech.debug("Storing url info in cache.")
     #generate unique id
     url_md5 = hashlib.md5(url.encode()).hexdigest()
     short_id = url_md5 #[:8]
@@ -106,7 +106,7 @@ def create_cached_url_info(url: str, lang: str, etag: str) -> str:
     return short_id
 
 def pop_cached_url_info(short_id: str) -> str:
-    logger.info("Popping url info from cache.")
+    logger_tech.debug("Popping url info from cache.")
     cache_key = f"urlinfo_cache:{short_id}"
     cache_value = redis_client.get(cache_key)
     if cache_value is None:
@@ -116,7 +116,7 @@ def pop_cached_url_info(short_id: str) -> str:
 
 
 def store_cached_design_transcript(url: str, lang: str, etag: str, transcript: str) -> None:
-    logger.info("Storing transcript in cache.")
+    logger_tech.debug("Storing transcript in cache.")
     cache_key = f"transcript_cache:{url}"
     
     # Check if an entry already exists
@@ -181,7 +181,7 @@ Email registration validation key cache
 """
 
 def create_email_validation_key( email: str, key:str, tool:str) -> str:
-    logger.info("Storing validation_key info in cache.")
+    logger_tech.debug("Storing validation_key info in cache.")
     #generate unique id randomly
     short_id = str(uuid.uuid4())
     cache_key = f"email_validation_key:{short_id}"
@@ -194,7 +194,7 @@ def create_email_validation_key( email: str, key:str, tool:str) -> str:
     return short_id
 
 def get_email_validation_key(validation_key: str) -> str:
-    logger.info("Popping url info from cache.")
+    logger_tech.debug("Popping url info from cache.")
     cache_key = f"email_validation_key:{validation_key}"
     cache_value = redis_client.get(cache_key)
     if cache_value is None:

@@ -7,8 +7,8 @@ from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
 from utils.config import TECH_CONFIG
-from utils.helpers import get_current_date, logger
-from utils.exceptions import NotEnoughCreditException
+from utils.helpers import get_current_date, logger_tech 
+from utils.exceptions import NotEnoughCreditException, InvalidEmailValidationKeyException
 
 # -----------------------------------------------------------------------------
 # DynamoDB Functions 
@@ -276,24 +276,24 @@ def get_credits_total(email: str) -> int:
 def test_db():
     # Test add_credits
     add_credits("olivier.motelet@gmail.com", 1.5, 2)
-    logger.info(">>>> test DB : oli credit left : " + str(get_credits_left("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli credit left : " + str(get_credits_left("olivier.motelet@gmail.com")))
     
     # Test use_credits
-    logger.info(">>>> test DB : oli credit left after use : " + str(get_credits_left("olivier.motelet@gmail.com")))
-    logger.info(">>>> test DB : oli credit used : " + str(get_credits_used("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli credit left after use : " + str(get_credits_left("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli credit used : " + str(get_credits_used("olivier.motelet@gmail.com")))
     
     # Test get_credits_total
-    logger.info(">>>> test DB : oli credit total : " + str(get_credits_total("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli credit total : " + str(get_credits_total("olivier.motelet@gmail.com")))
     
     # Test get_usage_history
-    logger.info(">>>> test DB : oli usage history : " + str(get_usage_history("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli usage history : " + str(get_usage_history("olivier.motelet@gmail.com")))
     
     # Test get_foundings_history
-    logger.info(">>>> test DB : oli foundings history : " + str(get_foundings_history("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli foundings history : " + str(get_foundings_history("olivier.motelet@gmail.com")))
     
     # Test get_usage_total
-    logger.info(">>>> test DB : oli usage total : " + str(get_usage_total("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli usage total : " + str(get_usage_total("olivier.motelet@gmail.com")))
     
     # Test get_foundings_total
-    logger.info(">>>> test DB : oli foundings total : " + str(get_foundings_total("olivier.motelet@gmail.com")))
+    logger_tech.info(">>>> test DB : oli foundings total : " + str(get_foundings_total("olivier.motelet@gmail.com")))
       

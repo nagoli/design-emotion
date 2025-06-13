@@ -8,7 +8,7 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 from utils.config import TECH_CONFIG
-from utils.helpers import logger
+from utils.helpers import logger_tech
 
 
 def send_registration_mail(email: str, validation_key: str):
@@ -23,11 +23,18 @@ def send_registration_mail(email: str, validation_key: str):
     Returns:
         bool: True if the email was sent successfully, False otherwise
     """
-    # Create SES client
-    ses = boto3.client('ses', region_name=TECH_CONFIG["aws_region"])
     
     # Construct validation URL with the key as a query parameter
     validation_url = f"https://design-emotion.org/validate-email?validation_key={validation_key}"
+    
+    print ("#### validation_url")
+    print(validation_url)
+    return None
+    
+    # Create SES client
+    ses = boto3.client('ses', region_name=TECH_CONFIG["aws_region"])
+    
+    
     
     # Prepare email content
     subject = "Confirmez votre inscription - Design Emotion"
@@ -72,8 +79,8 @@ def send_registration_mail(email: str, validation_key: str):
             Destination={'ToAddresses': [email]},
             Message=email_message
         )
-        logger.info(f"Email sent to {email}. MessageId: {response['MessageId']}")
+        logger_tech.debug(f"Email sent to {email}. MessageId: {response['MessageId']}")
         return True
     except ClientError as e:
-        logger.error(f"Failed to send email: {e}")
+        logger_tech.error(f"Failed to send email: {e}")
         return False

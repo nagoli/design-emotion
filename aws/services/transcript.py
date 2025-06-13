@@ -10,10 +10,10 @@ from services.cache import (
 )
 from services.llm import generate_design_transcript, _translate_with_chatgpt
 
-from utils.helpers import logger
+from utils.helpers import logger_tech, logger_business
 
 
-def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str = "en", ) -> (bool, str):
+def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str = "en", log_data: dict = {}) -> (bool, str):
     """
     Main orchestration function:
       1. Cleans the URL of query parameters.
@@ -30,7 +30,7 @@ def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str 
     
     
     # Clean the URL by removing query parameters
-    logger.info(f"Request to get_design_transcript: url={url}, etag={etag}, lang={lang}")
+    logger_tech.debug(f"Request to get_design_transcript: url={url}, etag={etag}, lang={lang}")
     if "?" in url:
         url = url.split("?")[0]
 
@@ -41,7 +41,7 @@ def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str 
             return None
         for (trans_lang, trans_text) in transcripts:
             if trans_lang == lang:
-                logger.info(f"Found transcript in requested language ({lang}) in cache.")
+                logger_tech.debug(f"Found transcript in requested language ({lang}) in cache.")
                 return trans_text
 
         # If we have a transcript but not the requested language, translate it
@@ -50,7 +50,11 @@ def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str 
             translated = _translate_with_chatgpt(trans_text, trans_lang, lang)
             # Update cache with the newly translated transcript
             store_cached_design_transcript(url, lang, etag, translated)
-            logger.info(f"Added translated transcript ({lang}) to cache.")
+            
+            log_data["action"] = "translate_transcript"
+            logger_business.log(status="200", **log_data)
+            logger_tech.debug(f"Added translated transcript ({lang}) to cache.")
+            
             return translated
         return None
     
@@ -64,7 +68,7 @@ def get_design_transcript(email: str, key: str, url: str, etag: str,  lang: str 
 def get_design_transcript_with_image(id, img) :
     
     info= pop_cached_url_info(id)
-    logger.info( f"retrived info = {info}" )
+    logger_tech.debug( f"retrived info = {info}" )
     if (info is None):
         return "Internal Error - try again "
     
